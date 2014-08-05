@@ -72,15 +72,38 @@
 		}
 	};
 	
-	term.open=function open(fullpath){
+	term.lookup=function lookup(fullpath){
 		var path=fullpath.split("/");
 		if(path[0]==""){
 			var currentPath=root;
 			for(var i=1;i<path.length;i++){
 				currentPath=currentPath[path[i]];
+				if(currentPath==null)
+					return null;
 			}
-			return currentPath.open();
+			return currentPath;
 		}
+	};
+	
+	term.open=function open(fullpath){
+		return term.lookup(fullpath).open();
+	};
+	
+	term.create=function create(path){
+		path=path.split("/");
+		var currentPath=root;
+		for(var i=1;i<path.length;i++){
+			if(!currentPath[path[i]]){
+				currentPath[path[i]]={};
+			}
+			currentPath=currentPath[path[i]];
+		}
+		return currentPath;
+	};
+	
+	term.createExecFile=function createExecFile(file, path){
+		var realFile=term.create(path);
+		realFile.exec=file;
 	};
 	
 	window.Root=root;
@@ -93,6 +116,14 @@ $(window).load(function(){
 	});
 });
 
+Terminal.createExecFile(function(args){
+	var stdout=Terminal.open("/dev/stdout");
+	for(var i=1;i<args.length;i++){
+		stdout.write(args[i]+" ");
+	}
+	stdout.write("\n");
+}, "/bin/echo");
+
 $(window).load(function(){
 	var stdout=Terminal.open("/dev/stdout");
 	var stdin=Terminal.open("/dev/stdin");
@@ -100,8 +131,12 @@ $(window).load(function(){
 	var path="~";
 	function parseInput(str){
 		str=str.split(" ");
-		if(str[0]=="clear")$("body").html("<p>");
-		stdout.write(str[0]+" is not supported.\n");
+		var file=Terminal.lookup("/bin/"+str[0]);
+		if(!file||!file.exec){
+			stdout.write(str[0]+" is not supported.\n");
+		}else{
+			file.exec(str);
+		}
 	}
 	function readLineAndParse(){
 		stdout.write("\033[1;40;34m"+path+" \033[1;40;31m$ \033[0m");
