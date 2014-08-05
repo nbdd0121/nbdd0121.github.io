@@ -1,0 +1,39 @@
+body{
+	background-color: #3D3D3D;
+	color: #EEEB82;
+	font-size: 17px;
+	font-family: Consolas, Courier, monospace;
+	padding:20px;
+	font-weight:bold;
+}
+p{
+	margin:0px;
+	line-height:28px;
+}
+#inputbox{
+	outline: none;
+	border: none;
+	background-color: #3D3D3D;
+	color: #EEEB82;
+	font-size: 17px;
+	font-family: Consolas, Courier, monospace;
+	font-weight:bold;
+}
+.color30{
+	color:#3D3D3D;
+}
+.color31{
+	color:#D74D52;
+}
+.color34{
+	color:#71CFEE;
+}
+.color37{
+	color:#EEEB82;
+}
+.color40{
+	background-color:#3D3D3D;
+}
+.color47{
+	background-color:#EEEB82;
+}
