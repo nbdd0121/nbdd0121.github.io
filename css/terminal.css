@@ -1,11 +1,16 @@
 body{
 	background-color: #3D3D3D;
-	color: #EEEB82;
 	font-size: 17px;
 	font-family: Consolas, Courier, monospace;
-	padding:20px;
+	margin:20px;
 	font-weight:bold;
 }
+
+/* in IE, a stupid clear button is displayed */
+input::-ms-clear{
+	display: none;
+}
+
 p{
 	margin:0px;
 	line-height:28px;
@@ -13,8 +18,6 @@ p{
 #inputbox{
 	outline: none;
 	border: none;
-	background-color: #3D3D3D;
-	color: #EEEB82;
 	font-size: 17px;
 	font-family: Consolas, Courier, monospace;
 	font-weight:bold;
