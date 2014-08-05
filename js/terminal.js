@@ -56,6 +56,12 @@
 					callback(input.val());
 				}
 			});
+			input.keydown(function(e){
+				switch(e.which){
+				case 38:alert("UP");break;
+				case 40:alert("DOWN");break;
+				}
+			});
 		}
 	};
 	
@@ -123,6 +129,10 @@ Terminal.createExecFile(function(args){
 	}
 	stdout.write("\n");
 }, "/bin/echo");
+
+Terminal.createExecFile(function(args){
+	$("body").html("<p>");
+}, "/bin/clear");
 
 $(window).load(function(){
 	var stdout=Terminal.open("/dev/stdout");
