@@ -198,7 +198,17 @@ Terminal.createExecFile(function(args, callback){
 		pwd:function pwd(args, cbk){
 			stdout.write(path+"\n");
 			cbk();
+		},
+		ls:function ls(args, cbk){
+			var current=Terminal.lookup(path);
+			for(var i in current){
+				if(i.substr(0, 2)=="__")continue;
+				stdout.write(i+" ");
+			}
+			stdout.write("\n");
+			cbk();
 		}
+		
 		
 		
 	};
