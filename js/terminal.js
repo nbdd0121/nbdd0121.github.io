@@ -25,11 +25,25 @@ VFS.open("/bin/clear", true).write(function(env, args, callback){
 	callback();
 });
 
+VFS.open("/bin/pwd", true).write(function(env, args, callback){
+	VFS.open("/dev/stdout").write(env.WORKING_DIRECTORY+"\n");
+	callback();
+});
+
+VFS.open("/bin/ls", true).write(function(env, args, callback){
+	var stdout=VFS.open("/dev/stdout");
+	var current=VFS.open(env.WORKING_DIRECTORY).list();
+	for(var i=0;i<current.length;i++){
+		stdout.write(current[i]+" ");
+	}
+	stdout.write("\n");
+	callback();
+});
+
 VFS.open("/bin/bash", true).write(function(env, args, callback){
 	var stdout=VFS.open("/dev/stdout");
 	var stdin=VFS.open("/dev/stdin");
 	
-	var path="/home/";
 	var history=[];
 	var inputBackup;
 	var id=0;
@@ -43,30 +57,18 @@ VFS.open("/bin/bash", true).write(function(env, args, callback){
 		},
 		cd:function cd(env, args, cbk){
 			if(!args[1]){
-				path="/home/"
+				env.WORKING_DIRECTORY="/home/"
 			}else{
-				var cddest=args[1][0]=="/"?args[1]:path+args[1];
+				var cddest=args[1][0]=="/"?args[1]:env.WORKING_DIRECTORY+args[1];
 				var newPath=VFS.lookup(cddest);
 				if(newPath==null){
 					stdout.write("No such file or directory called "+args[1]+"\n");
 				}else if(newPath.type!="dir"){
 					stdout.write(args[1]+" is not a directory\n");
 				}else{
-					path=newPath.path+"/";
+					env.WORKING_DIRECTORY=newPath.path+"/";
 				}
 			}
-			cbk();
-		},
-		pwd:function pwd(env, args, cbk){
-			stdout.write(path+"\n");
-			cbk();
-		},
-		ls:function ls(env, args, cbk){
-			var current=VFS.open(path).list();
-			for(var i=0;i<current.length;i++){
-				stdout.write(current[i]+" ");
-			}
-			stdout.write("\n");
 			cbk();
 		}
 	};
@@ -86,8 +88,8 @@ VFS.open("/bin/bash", true).write(function(env, args, callback){
 			stdout.write(str[0]+" is not supported.\n");
 			callback();
 		}else{
-			var pathsplit="/bin/;".split(";");
-			pathsplit.push(path);
+			var pathsplit=env.PATH.split(";");
+			pathsplit.push(env.WORKING_DIRECTORY);
 			for(var i=0;i<pathsplit.length;i++){
 				if(pathsplit[i]!=""){
 					var file=VFS.open(pathsplit[i]+str[0]);
@@ -102,7 +104,7 @@ VFS.open("/bin/bash", true).write(function(env, args, callback){
 		}
 	}
 	function readLineAndParse(){
-		stdout.write("\033[1;40;34m"+(path=="/home/"?"~":path)+" \033[1;40;31m$ \033[0m");
+		stdout.write("\033[1;40;34m"+(env.WORKING_DIRECTORY==env.HOME?"~":env.WORKING_DIRECTORY)+" \033[1;40;31m$ \033[0m");
 		stdin.readLine(function(val){
 			if(history[history.length-1]!=val){
 				history.push(val);
@@ -133,10 +135,16 @@ VFS.open("/bin/bash", true).write(function(env, args, callback){
 }, "/bin/bash");
 
 $(window).load(function(){
+	var env={
+		PATH:"/bin/;",
+		HOME:"/home/",
+		WORKING_DIRECTORY:"/home/"
+	};
+	
 	var stdout=VFS.open("/dev/stdout");
 	stdout.write("Gary Guo <nbdd0121@hotmail.com>\nCopyright (c) 2014, Gary Guo. All rights reserved.\n");
 	function createBash(){
-		VFS.open("/bin/bash").exec(null, ["/bin/bash"], function(){
+		VFS.open("/bin/bash").exec(env, ["/bin/bash"], function(){
 			stdout.write("Permission Denied: You cannot exit this session.\n");
 			createBash();
 		});

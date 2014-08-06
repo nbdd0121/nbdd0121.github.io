@@ -27,7 +27,7 @@
 	
 	FileDesc.prototype.exec=function exec(env, args, callback){
 		if(this.node.data instanceof Function){
-			this.node.data(env, args, callback);
+			this.node.data(jQuery.extend({}, env), args, callback);
 			return this;
 		}
 		throw "Unsupported Operation";
