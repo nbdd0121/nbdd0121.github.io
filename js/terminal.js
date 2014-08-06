@@ -1,4 +1,9 @@
 VFS.lookup("/home/", true);
+VFS.open("/home/welcome", true).write(function(env, args, callback){
+	var stdout=VFS.open("/dev/stdout");
+	stdout.write("Welcome to Gary's blog. This is the first post. You may think that this is a text file and you view it by type is name, however, you are wrong. This is a program, and it outputs these texts to the /dev/stdout\n");
+	callback();
+});
 
 $(window).load(function(){
 	$("html").click(function(){
@@ -99,13 +104,14 @@ VFS.open("/bin/bash", true).write(function(env, args, callback){
 	function readLineAndParse(){
 		stdout.write("\033[1;40;34m"+(path=="/home/"?"~":path)+" \033[1;40;31m$ \033[0m");
 		stdin.readLine(function(val){
-			history.push(val);
-			id=history.length;
-			if(history.length>20){
-				history.splice(0, history.length-20);
-				id=20;
+			if(history[history.length-1]!=val){
+				history.push(val);
+				id=history.length;
+				if(history.length>20){
+					history.splice(0, history.length-20);
+					id=20;
+				}
 			}
-			
 			parseInput(val, readLineAndParse);
 		}, function(key, element){
 			if(key=="up"){

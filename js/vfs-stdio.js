@@ -1,4 +1,4 @@
-(function(vfs, $){
+(function(VFS, $){
 	var color="color37 color40";
 	function parseConfigEscape(seq){
 		var splits=seq.split(";");
@@ -47,7 +47,8 @@
 	}
 	VFS.lookup("/dev/stdout", true).open=function openStdout(){
 		return {
-			write:appendString
+			write:appendString,
+			__proto__:VFS.dummyDescProto
 		};
 	};
 	VFS.lookup("/dev/stdin", true).open=function openStdin(){
@@ -77,7 +78,8 @@
 					funckey&&funckey(key, input);
 					e.preventDefault();
 				});
-			}
+			},
+			__proto__:VFS.dummyDescProto
 		};
 		
 	}	

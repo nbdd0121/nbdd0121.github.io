@@ -129,6 +129,10 @@
 		return null;
 	}
 	
+	VFS.dummyDescProto={
+	    canExec:function(){return false;} 
+	};
+	
 	
 	window.VFS=VFS;
 })(window);
