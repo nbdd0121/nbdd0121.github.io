@@ -11,3 +11,17 @@ function encodeHtml(str){
   s=s.replace(/\n/g, "<br>");
   return s;
 }
+
+String.prototype.common=function common(str){
+  var len=Math.min(this.length, str.length);
+  for(var i=0; i < len; i++){
+    if(str[i] != this[i]){
+      return str.substr(0, i);
+    }
+  }
+  return str.substr(0, len);
+}
+
+function clone(f){
+  return jQuery.extend({}, f);
+}

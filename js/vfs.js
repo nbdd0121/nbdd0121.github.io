@@ -41,7 +41,7 @@
   }
   FileDesc.prototype.exec=function exec(env, args, callback){
     if(this.node.data instanceof Function){
-      this.node.data(jQuery.extend({}, env), args, callback);
+      this.node.data(clone(env), args, callback);
       return this;
     }
     throw "Unsupported Operation";
@@ -163,7 +163,7 @@
     },
     canRead:function canRead(){
       return false;
-    }
+    },
   };
 
   window.VFS=VFS;
