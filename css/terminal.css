@@ -26,20 +26,54 @@ p{
 	font-family: Consolas, Courier, monospace;
 	font-weight:bold;
 }
+.colorDefault{
+	color:#EEEB82;
+	background-color:#3D3D3D;
+}
 .color30{
-	color:#3D3D3D;
+	color:#555753;
 }
 .color31{
-	color:#D74D52;
+	color:#EF2929;
+}
+.color32{
+	color:#8AE234;
+}
+.color33{
+	color:#FCE94F;
 }
 .color34{
-	color:#71CFEE;
+	color:#729FCF;
+}
+.color35{
+	color:#AD7FA8;
+}
+.color36{
+	color:#34E2E2;
 }
 .color37{
-	color:#EEEB82;
+	color:#EEEEEC;
 }
 .color40{
-	background-color:#3D3D3D;
+	background-color:#000000;
+}
+.color41{
+	background-color:#CC0000;
+}
+.color42{
+	background-color:#4E9A06;
+}
+.color43{
+	background-color:#C4A000;
+}
+.color44{
+	background-color:#3465A4;
+}
+.color45{
+	background-color:#75507B;
+}
+.color46{
+	background-color:#000000;
 }
 .color47{
 	background-color:#EEEB82;
