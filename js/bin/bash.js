@@ -44,10 +44,14 @@
         var f=lib.fopen(paths[i]);
         if(!f)
           continue;
-        f=f.list();
-        for(var j=0; j < f.length; j++){
-          if(f[j].indexOf(prefix) == 0){
-            pc.push(f[j]);
+        var list=f.list();
+        for(var j=0; j < list.length; j++){
+          if(list[j].indexOf(prefix) == 0){
+            if(lib.fopen(f.node.path+"/"+list[j]).isDirectory()){
+              pc.push(list[j]+"/");
+            }else{
+              pc.push(list[j]);
+            }
           }
         }
       }
@@ -62,13 +66,15 @@
     }
     function execute(arg){
       var args=arg.trim().split(" ");
-      for(var i=1; i < args.length - 1; i++){
+      for(var i=0; i < args.length; i++){
         if(args[i] == ""){
           args.splice(i, 1);
           i--;
         }
       }
+      console.log(args);
       if(args.length == 0){
+        readAndExec();
         return;
       }
       if(builtinFunc[args[0]]){
@@ -84,6 +90,7 @@
     }
     function readAndExec(){
       printPrompt();
+      var prev="";
       lib.historyNextLine(function(input){
         execute(input);
       }, function(key, element){
@@ -101,6 +108,10 @@
           }else{
             var ext=extractCommon(pc);
             if(ext == currentInput){
+              if(prev!=currentInput){
+                prev=currentInput;
+                return;
+              }
               /* Print out all possible alternative */
               element.remove();
               lib.puts(currentInput + "\n");
@@ -127,6 +138,10 @@
           }else{
             var ext=extractCommon(pc);
             if(ext == file){
+              if(prev!=currentInput){
+                prev=currentInput;
+                return;
+              }
               /* Print out all possible alternative */
               element.remove();
               lib.puts(currentInput + "\n");
