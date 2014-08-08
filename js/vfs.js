@@ -2,11 +2,11 @@
   var VFS={};
   function FileNode(parent, name, type){
     this.parent=parent;
-    parent.data["/"+name]=this;
-    this.path=parent.path+"/"+name;
+    parent.data["/" + name]=this;
+    this.path=parent.path + "/" + name;
     this.name=name;
     this.type=type;
-    if(type=="dir"){
+    if(type == "dir"){
       this.data={};
     }
   }
@@ -16,18 +16,18 @@
   }
 
   FileNode.prototype.contains=function contains(name){
-    if(this.data["/"+name])
+    if(this.data["/" + name])
       return true;
     return false;
   };
   FileNode.prototype.get=function get(name){
-    return this.data["/"+name];
+    return this.data["/" + name];
   };
   FileNode.prototype.open=function open(){
     return new FileDesc(this);
   };
   FileDesc.prototype.isDirectory=function isDirectory(){
-    return this.node.type=="dir";
+    return this.node.type == "dir";
   }
   FileDesc.prototype.exec=function exec(env, args, callback){
     if(this.node.datainstanceofFunction){
@@ -37,23 +37,23 @@
     throw "Unsupported Operation";
   };
   FileDesc.prototype.canExec=function canExec(){
-    return this.node.datainstanceofFunction;
+    return this.node.data instanceof Function;
   };
 
   FileDesc.prototype.write=function write(str){
-    if(this.node.data==null){
+    if(this.node.data == null){
       this.node.data=str;
       return this;
     }
-    if(typeof (this.node.data)=="string"){
+    if(typeof (this.node.data) == "string"){
       this.node.data+=str;
       return this;
     }
     throw "Unsupported Operation";
   };
   FileDesc.prototype.read=function read(str){
-    if(typeof (this.node.data)=="string"){
-      if(this.ptr==this.node.data.length)
+    if(typeof (this.node.data) == "string"){
+      if(this.ptr == this.node.data.length)
         return null;
       var ret=this.node.data[this.ptr];
       this.ptr++;
@@ -62,29 +62,29 @@
     throw "Unsupported Operation";
   };
   FileDesc.prototype.readLine=function readLine(str){
-    if(typeof (this.node.data)=="string"){
+    if(typeof (this.node.data) == "string"){
       var str=this.node.data;
-      if(this.ptr==str.length)
+      if(this.ptr == str.length)
         return null;
       var id=str.indexOf("\n", this.ptr);
-      if(id==-1){
+      if(id == -1){
         var ret=str.substr(this.ptr);
         this.ptr=str.length;
         return ret;
       }else{
-        var ret=str.substr(this.ptr, id-this.ptr);
-        this.ptr=id+1;
+        var ret=str.substr(this.ptr, id - this.ptr);
+        this.ptr=id + 1;
         return ret;
       }
     }
     throw "Unsupported Operation";
   };
   FileDesc.prototype.list=function list(){
-    if(this.node.type!="dir")
+    if(this.node.type != "dir")
       throw "Unsupported Operation";
     var ret=[];
     for( var i in this.node.data){
-      if(i[0]=="/")
+      if(i[0] == "/")
         ret.push(i.substr(1));
     }
     return ret;
@@ -107,13 +107,13 @@
   VFS.lookup=function lookup(fullpath, newFile){
     var path=fullpath.substr(1).split("/");
     var ifntype="file";
-    if(!path[path.length-1]){
+    if(!path[path.length - 1]){
       path.pop();
       ifntype="dir";
     }
 
     var cur=VFS.root;
-    for(var i=0; i<path.length; i++){
+    for(var i=0; i < path.length; i++){
       var subpath=path[i];
       switch(subpath){
         case "":
@@ -128,7 +128,7 @@
         if(!newFile){
           return null;
         }
-        new FileNode(cur, subpath, i==path.length-1?ifntype:"dir");
+        new FileNode(cur, subpath, i == path.length - 1?ifntype:"dir");
       }
       cur=cur.get(subpath);
     }
