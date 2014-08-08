@@ -26,8 +26,18 @@
   FileNode.prototype.open=function open(){
     return new FileDesc(this);
   };
-  FileDesc.prototype.isDirectory=function isDirectory(){
-    return this.node.type == "dir";
+  FileDesc.prototype={
+    /* Type Information */
+    isDirectory:function isDirectory(){
+      return this.node.type == "dir";
+    },
+    /* Permission Information */
+    canExec:function canExec(){
+      return this.node.data instanceof Function;
+    },
+    canRead:function canRead(){
+      return typeof (this.node.data) == "string";
+    }
   }
   FileDesc.prototype.exec=function exec(env, args, callback){
     if(this.node.data instanceof Function){
@@ -36,10 +46,6 @@
     }
     throw "Unsupported Operation";
   };
-  FileDesc.prototype.canExec=function canExec(){
-    return this.node.data instanceof Function;
-  };
-
   FileDesc.prototype.write=function write(str){
     if(this.node.data == null){
       this.node.data=str;
@@ -51,31 +57,35 @@
     }
     throw "Unsupported Operation";
   };
-  FileDesc.prototype.read=function read(str){
+  FileDesc.prototype.read=function read(callback){
     if(typeof (this.node.data) == "string"){
       if(this.ptr == this.node.data.length)
         return null;
       var ret=this.node.data[this.ptr];
       this.ptr++;
-      return ret;
+      callback(ret);
+    }else{
+      throw "Unsupported Operation";
     }
-    throw "Unsupported Operation";
   };
-  FileDesc.prototype.readLine=function readLine(str){
+  FileDesc.prototype.readLine=function readLine(callback){
     if(typeof (this.node.data) == "string"){
       var str=this.node.data;
-      if(this.ptr == str.length)
-        return null;
+      if(this.ptr == str.length){
+        callback(null);
+        return;
+      }
       var id=str.indexOf("\n", this.ptr);
       if(id == -1){
         var ret=str.substr(this.ptr);
         this.ptr=str.length;
-        return ret;
+        callback(ret);
       }else{
         var ret=str.substr(this.ptr, id - this.ptr);
         this.ptr=id + 1;
-        return ret;
+        callback(ret);
       }
+      return;
     }
     throw "Unsupported Operation";
   };
@@ -143,7 +153,15 @@
   }
 
   VFS.dummyDescProto={
-    canExec:function(){
+    /* Type Information */
+    isDirectory:function isDirectory(){
+      return false;
+    },
+    /* Permission Information */
+    canExec:function canExec(){
+      return false;
+    },
+    canRead:function canRead(){
       return false;
     }
   };

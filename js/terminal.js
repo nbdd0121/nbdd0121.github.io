@@ -1,14 +1,5 @@
 VFS.lookup("/home/", true);
-VFS
-    .open("/home/welcome", true)
-    .write(
-        function(env, args, callback){
-          var stdout=VFS.open("/dev/stdout");
-          stdout
-              .write("Welcome to Gary's blog. This is the first post. You may think that this is a text file and you view it by type is name, however, you are wrong. This is a program, and it outputs these texts to the /dev/stdout\n");
-          callback();
-        });
-VFS.open("/home/welcode", true).write("Text file");
+VFS.open("/home/welcome", true).write("Welcome to Gary's blog. This is the real first post.");
 
 $(window).load(function(){
   $("html").click(function(){
@@ -46,16 +37,25 @@ VFS.open("/bin/ls", true).write(wrapCLib(function(lib, args, callback){
 VFS.open("/bin/cat", true).write(wrapCLib(function(lib, args, callback){
   var current=lib.fopen(args[1]);
   if(current == null){
-    lib.puts("cat: " + args[1] + ": No such file or directory\n")
+    lib.puts("cat: " + args[1] + ": No such file or directory\n");
+    callback();
   }else if(current.isDirectory()){
-    lib.puts("cat: " + args[1] + ": Is a directory\n")
+    lib.puts("cat: " + args[1] + ": Is a directory\n");
+    callback();
+  }else if(!current.canRead()){
+    lib.puts("cat: " + args[1] + ": Permission denied\n");
+    callback();
   }else{
-    var line;
-    while((line=current.readLine()) != null){
-      lib.puts(line + "\n");
+    function onRead(str){
+      if(str == null){
+        callback();
+      }else{
+        lib.puts(str+"\n");
+        current.readLine(onRead);
+      }
     }
+    current.readLine(onRead);
   }
-  callback();
 }));
 
 VFS.open("/bin/bash", true).write(

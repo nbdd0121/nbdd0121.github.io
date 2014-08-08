@@ -91,6 +91,10 @@
           e.preventDefault();
         });
       },
+      
+      canRead:function canRead(){
+        return true;
+      },
       __proto__:VFS.dummyDescProto
     };
 
