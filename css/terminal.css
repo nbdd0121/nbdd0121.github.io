@@ -17,17 +17,18 @@ input::-ms-clear{
 
 p{
 	margin:0px;
-	line-height:28px;
+	line-height:24px;
 }
 #inputbox{
 	outline: none;
 	border: none;
+	margin: 0px;
 	font-size: 17px;
 	font-family: Consolas, Courier, monospace;
 	font-weight:bold;
 }
 .colorDefault{
-	color:#EEEB82;
+	color:#EEEEEC;
 	background-color:#3D3D3D;
 }
 .color30{

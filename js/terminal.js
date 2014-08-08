@@ -7,14 +7,6 @@ $(window).load(function(){
   });
 });
 
-VFS.open("/bin/echo", true).write(wrapCLib(function(lib, args, callback){
-  for(var i=1; i < args.length; i++){
-    lib.puts(args[i] + " ");
-  }
-  lib.puts("\n");
-  callback();
-}));
-
 VFS.open("/bin/clear", true).write(function(env, args, callback){
   $("body").html("<p>");
   callback();
@@ -24,15 +16,6 @@ VFS.open("/bin/pwd", true).write(function(env, args, callback){
   VFS.open("/dev/stdout").write(env.WORKING_DIRECTORY + "\n");
   callback();
 });
-
-VFS.open("/bin/ls", true).write(wrapCLib(function(lib, args, callback){
-  var current=lib.fopen(args.length > 1?args[1]:"").list();
-  for(var i=0; i < current.length; i++){
-    lib.puts(current[i] + " ");
-  }
-  lib.puts("\n");
-  callback();
-}));
 
 VFS.open("/bin/cat", true).write(wrapCLib(function(lib, args, callback){
   var current=lib.fopen(args[1]);

@@ -20,7 +20,7 @@
     var ret;
     if(seq[0]){
       ret=$('<span class="'+color+'">');
-      ret.text(seq[0]);
+      ret.html(encodeHtml(seq[0]));
     }else{
       ret=$();
     }
@@ -29,7 +29,7 @@
       var realTextBegin=txt.indexOf("m");
       parseConfigEscape(txt.substr(0, realTextBegin));
       var jq=$('<span class="'+color+'">');
-      jq.text(txt.substr(realTextBegin+1));
+      jq.html(encodeHtml(txt.substr(realTextBegin+1)));
       ret=ret.add(jq);
     }
     return ret;
@@ -46,13 +46,19 @@
       $("p:last-child").append(genSingleLineCode(line));
     }
   }
-  VFS.lookup("/dev/stdout", true).open=function openStdout(){
+  
+  var stdoutFile=VFS.lookup("/dev/stdout", true);
+  stdoutFile.type="dev";
+  stdoutFile.open=function openStdout(){
     return {
       write:appendString,
       __proto__:VFS.dummyDescProto
     };
   };
-  VFS.lookup("/dev/stdin", true).open=function openStdin(){
+  
+  var stdinFile=VFS.lookup("/dev/stdin", true);
+  stdinFile.type="dev";
+  stdinFile.open=function openStdin(){
     return {
       readLine:function readLine(callback, funckey){
         function adjustWidth(input){
