@@ -36,14 +36,14 @@
   }
   function appendString(str){
     var datas=str.split("\n");
-    $("p:last-child").append(genSingleLineCode(datas[0]));
+    $("p:last").append(genSingleLineCode(datas[0]));
     for(var lineNum=1; lineNum<datas.length; lineNum++){
       var line=datas[lineNum];
-      var prevp=$("p:last-child");
+      var prevp=$("p:last");
       if(prevp.text()=="")
         prevp.html("&nbsp;");
       $("body").append("<p>");
-      $("p:last-child").append(genSingleLineCode(line));
+      $("p:last").append(genSingleLineCode(line));
     }
   }
   
