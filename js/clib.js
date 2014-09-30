@@ -43,7 +43,7 @@
         var onceNonnull=false;
         var pathSplit=this.env.PATH.split(";");
         if(cmd.indexOf("/")!=-1){
-          pathSplit.push(this.WORKING_DIRECTORY);
+          pathSplit.push(this.env.WORKING_DIRECTORY);
         }
         for(var i=0;i<pathSplit.length;i++){
           var p=pathSplit[i];
