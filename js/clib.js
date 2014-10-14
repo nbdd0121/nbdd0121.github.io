@@ -47,6 +47,9 @@
         }
         for(var i=0;i<pathSplit.length;i++){
           var p=pathSplit[i];
+          if(p[0]!="/"){
+            p=this.env.WORKING_DIRECTORY+p;
+          }
           var file=VFS.open(p+"/"+cmd);
           if(file==null){
             continue;
@@ -68,7 +71,7 @@
           throw "command not found";
         }
       }
-      var file=VFS.open(cmd[0]);
+      var file=VFS.open(cmd);
       if(file==null){
         throw "command not found";
       }

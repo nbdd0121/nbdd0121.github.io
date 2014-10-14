@@ -1,16 +1,23 @@
 (function(VFS, $){
   var color="colorDefault";
+  var encode=true;
   function parseConfigEscape(seq){
     var splits=seq.split(";");
     switch(splits[0]){
       case "0":
         color="colorDefault";
+        encode=true;
         break;
       case "1": {
         color="";
         for(var i=1; i<splits.length; i++){
           color+="color"+splits[i]+" ";
         }
+        break;
+      }
+      case "2": {
+        color="colorDefault";
+        encode=false;
         break;
       }
     }
@@ -20,7 +27,7 @@
     var ret;
     if(seq[0]){
       ret=$('<span class="'+color+'">');
-      ret.html(encodeHtml(seq[0]));
+      ret.html(encode?encodeHtml(seq[0]):seq[0]);
     }else{
       ret=$();
     }
@@ -29,7 +36,7 @@
       var realTextBegin=txt.indexOf("m");
       parseConfigEscape(txt.substr(0, realTextBegin));
       var jq=$('<span class="'+color+'">');
-      jq.html(encodeHtml(txt.substr(realTextBegin+1)));
+      jq.html(encode?encodeHtml(txt.substr(realTextBegin+1)):txt.substr(realTextBegin+1));
       ret=ret.add(jq);
     }
     return ret;

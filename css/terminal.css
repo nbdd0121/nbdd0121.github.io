@@ -31,6 +31,12 @@ p{
 	color:#EEEEEC;
 	background-color:#3D3D3D;
 }
+a:link{
+	color:skyblue;
+}
+a:visited{
+	color:skyblue;
+}
 .color30{
 	color:#555753;
 }

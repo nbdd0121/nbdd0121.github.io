@@ -1,5 +1,4 @@
 VFS.lookup("/home/", true);
-VFS.open("/home/welcome", true).write("Welcome to Gary's blog. This is the real first post.");
 
 $(window).load(function(){
   $("html").click(function(){
@@ -45,7 +44,7 @@ $(window)
     .load(
         function(){
           var env={
-            PATH:"/bin/",
+            PATH:"/bin/;.",
             HOME:"/home/",
             WORKING_DIRECTORY:"/home/"
           };
