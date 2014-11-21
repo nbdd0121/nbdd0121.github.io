@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="minifier.min.js"></script>
+<script>
+	function $(sel){return document.querySelector(sel);}
+</script>
+<style>
+	html, body{
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+	}
+	.x-titlebar{
+		background: #2b579a;
+		width:100%;
+		height:50px;
+		color:white;
+		padding-left:20px;
+		cursor:default;
+		box-sizing:border-box;
+	}
+	.x-titlebar .title{
+		font-size: 24px;
+		line-height: 50px;
+	}
+	.x-menubar{
+		background: white;
+		width:100%;
+		height:30px;
+		border-bottom: lightgrey solid 1px;
+		color:#444444;
+		cursor:default;
+		box-sizing:border-box;
+	}
+	.x-menubar .tabbutton{
+		display: inline-block;
+		height: 30px;
+		line-height: 30px;
+		font-size: 12px;
+		padding-left: 8px;
+		padding-right: 8px;
+	}
+	.x-menubar .tabbutton:first-child{
+		padding-left: 20px;
+		padding-right: 20px;
+	}
+	.x-menubar .tabbutton:hover{
+		background: #d5e1f2;
+	}
+	.x-main{
+		width:100%;
+		height:calc(100% - 80px);
+	}
+	
+	#text{
+		width: 100%;
+		height:100%;
+		box-sizing: border-box;
+	}
+</style>
+</head>
+<body>
+<div class="x-titlebar">
+	<span class="title">Norlit JS Compiler Tools</span>
+</div>
+<div class="x-menubar">
+	<span class="tabbutton" onclick="$('#text').value=NorlitJSCompiler.minify($('#text').value)">MINIFY</span>
+</div>
+<div class="x-main">
+  <textarea id="text"></textarea>
+</div>
+</body>
+</html>
