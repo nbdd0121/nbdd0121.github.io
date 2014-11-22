@@ -2384,15 +2384,8 @@ function minify(ast) {
                     switch (ast.operator) {
                         case '+':
                         case '-':
-                            {
-                                var right = wrap(minify(ast.right), '+', true).str;
-                                if (right[0] == ast.operator)
-                                    right = ' ' + right;
-                                return {
-                                    str: wrap(minify(ast.left), '+').str + ast.operator + right,
-                                    p: '+'
-                                };
-                            }
+                            type = '+';
+                            break;
                         case '*':
                         case '/':
                         case '%':
@@ -2698,11 +2691,6 @@ function minify(ast) {
                 }
             case 'string':
                 return minifyString(ast);
-            case 'boolean':
-                return {
-                    str: '!' + Number(!ast),
-                    p: "UnaryExpression"
-                }
             default:
                 return {
                     str: ast + "",
