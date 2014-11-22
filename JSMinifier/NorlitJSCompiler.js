@@ -2718,6 +2718,7 @@ var syntax = {
 
 	BlockStatement: ["body"],
 	EmptyStatement: [],
+	DebuggerStatement: [],
 	ExpressionStatement: ["expression"],
 	VariableDeclaration: ["declarations"],
 	VariableDeclarator: ["init"],
