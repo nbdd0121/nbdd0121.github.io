@@ -1234,7 +1234,6 @@
 	5: [function(require, module, exports) {
 		'use strict';
 
-
 		module.exports = function() {
 			var type = require('./chartype.js');
 
@@ -1251,59 +1250,66 @@
 				ZWNJ = "\u200C",
 				ZWJ = "\u200D";
 
-			var keywords = {
-				break: 'break',
-				case: 'case',
-				catch: 'catch',
-				continue: 'continue',
-				debugger: 'debugger',
-				default: 'default',
-				delete: 'delete',
-				do: 'do',
-				else: 'else',
-				finally: 'finally',
-				for: 'for',
-				function: 'function',
-				if: 'if',
-				in : 'in',
-				instanceof: 'instanceof',
-				new: 'new',
-				return: 'return',
-				switch: 'switch',
-				this: 'this',
-				throw: 'throw',
-				try: 'try',
-				typeof: 'typeof',
-				var: 'var',
-				void: 'void',
-				while: 'while',
-				with: 'with',
-				class: 'reserved',
-				const: 'reserved',
-				enum: 'reserved',
-				export: 'reserved',
-				extends: 'reserved',
-				import: 'reserved',
-				super: 'reserved',
-				implements: 'reserved-strict',
-				interface: 'reserved-strict',
-				let: 'reserved-strict',
-				package: 'reserved-strict',
-				private: 'reserved-strict',
-				protected: 'reserved-strict',
-				public: 'reserved-strict',
-				static: 'reserved-strict',
-				yield: 'reserved-strict',
-				null: 'null',
-				true: 'true',
-				false: 'false'
+			var strictReserved = {
+				implements: true,
+				interface: true,
+				let: true,
+				package: true,
+				private: true,
+				protected: true,
+				public: true,
+				static: true,
+				yield: true
 			};
 
-			function lookupKeyword(identifierName) {
-				if (keywords.hasOwnProperty(identifierName)) {
-					return keywords[identifierName];
-				}
-				return null;
+			var reserved = {
+				class: true,
+				const: true,
+				enum: true,
+				export: true,
+				extends: true,
+				import: true,
+				super: true
+			};
+
+			var keywords = {
+				break: true,
+				case: true,
+				catch: true,
+				continue: true,
+				debugger: true,
+				default: true,
+				delete: true,
+				do: true,
+				else: true,
+				finally: true,
+				for: true,
+				function: true,
+				if: true,
+				in : true,
+				instanceof: true,
+				new: true,
+				return: true,
+				switch: true,
+				this: true,
+				throw: true,
+				try: true,
+				typeof: true,
+				var: true,
+				void: true,
+				while: true,
+				with: true,
+				null: true,
+				true: true,
+				false: true
+			};
+
+			function Lex(str) {
+				this.source = str;
+				this.ptr = 0;
+				this.line = 1;
+				this.lineBefore = false;
+				this.parseId = true;
 			}
 
 			function subChar(a, b) {
@@ -1314,32 +1320,92 @@
 				return String.fromCharCode(a);
 			}
 
-			function Lex(str) {
-				this.source = str;
-				this.ptr = 0;
-				this.line = 1;
-				this.lineBefore = false;
-				this.state = stateDefault;
-				this.parseId = true;
-				this.escaped = false;
+			function assert(bool) {
+				if (!bool) {
+					throw new Error('Assertion Error');
+				}
 			}
 
 			function Token(type) {
 				this.type = type;
 			}
 
-			Lex.prototype.lookahead = function() {
-				if (this.ptr >= this.source.length) {
+			function assertNext(lex, allowed) {
+				var nxt = nextChar(lex);
+				assert(allowed.indexOf(nxt) != -1);
+				return nxt;
+			};
+
+			function lookahead(lex) {
+				if (lex.ptr >= lex.source.length) {
 					return '\uFFFF';
 				}
-				return this.source[this.ptr];
+				return lex.source[lex.ptr];
 			}
 
-			Lex.prototype.next = function() {
-				if (this.ptr >= this.source.length) {
+			function nextChar(lex) {
+				if (lex.ptr >= lex.source.length) {
+					lex.ptr++;
 					return '\uFFFF';
 				}
-				return this.source[this.ptr++];
+				return lex.source[lex.ptr++];
+			}
+
+			function pushback(lex, num) {
+				lex.ptr -= num || 1;
+			}
+
+			/* Character type classification */
+			Lex.prototype.isHexDigit = function(digit) {
+				return "0123456789abcdefABCDEF".indexOf(digit) != -1;
+			}
+
+			Lex.prototype.isIdentfierStart = function(char) {
+				if (char == '$' || char == '_') {
+					return true;
+				}
+				switch (type(char)) {
+					case 'UPPERCASE_LETTER':
+					case 'LOWERCASE_LETTER':
+					case 'TITLECASE_LETTER':
+					case 'MODIFIER_LETTER':
+					case 'OTHER_LETTER':
+					case 'LETTER_NUMBER':
+						return true;
+				}
+				return false;
+			}
+
+			Lex.prototype.isIdentfierPart = function(char) {
+				if (char == '$' || char == '_' || char == ZWNJ || char == ZWJ) {
+					return true;
+				}
+				switch (type(char)) {
+					case 'UPPERCASE_LETTER':
+					case 'LOWERCASE_LETTER':
+					case 'TITLECASE_LETTER':
+					case 'MODIFIER_LETTER':
+					case 'OTHER_LETTER':
+					case 'LETTER_NUMBER':
+					case 'CONNECTOR_PUNCTUATION':
+					case 'DECIMAL_DIGIT_NUMBER':
+					case 'NON_SPACING_MARK':
+					case 'COMBINING_SPACING_MARK':
+						return true;
+				}
+				return false;
+			}
+
+			Lex.prototype.isStrictModeReserved = function(id) {
+				return strictReserved.hasOwnProperty(id);
+			}
+
+			Lex.prototype.isReserved = function(id) {
+				return reserved.hasOwnProperty(id);
+			}
+
+			Lex.prototype.isKeyword = function(id) {
+				return keywords.hasOwnProperty(id);
 			}
 
 			Lex.prototype.dealUnicodeEscapeSequence = function() {
@@ -1347,7 +1413,7 @@
 				var val = 0;
 				for (var i = 0; i < 4; i++) {
 					val *= 16;
-					d = this.next();
+					d = nextChar(this);
 					if (d >= '0' && d <= '9') {
 						val += subChar(d, '0');
 					} else if (d >= 'A' && d <= 'F') {
@@ -1361,85 +1427,68 @@
 				return char(val);
 			}
 
-			function stateDefault() {
-				var next = this.next();
+			Lex.prototype.proceedSpaces = function() {
+				while (true) {
+					var next = nextChar(this);
+					switch (next) {
+						case TAB:
+						case VT:
+						case FF:
+						case SP:
+						case NBSP:
+						case BOM:
+							break;
+						case CR:
+							if (lookahead(this) == LF)
+								nextChar(this);
+						case LF:
+						case LS:
+						case PS:
+							this.line++;
+							this.lineBefore = true;
+							break;
+						case '/':
+							var n = lookahead(this);
+							pushback(this);
+							if (n == '/') {
+								this.nextLineComment();
+								break;
+							} else if (n == '*') {
+								this.nextBlockComment();
+								break;
+							} else {
+								return;
+							}
+						default:
+							pushback(this);
+							return;
+					}
+				}
+			}
+
+			Lex.prototype.nextRawToken = function() {
+				var next = nextChar(this);
 				switch (next) {
-					case TAB:
-					case VT:
-					case FF:
-					case SP:
-					case NBSP:
-					case BOM:
-						return null;
-					case CR:
-						if (this.lookahead() == LF)
-							this.next();
-					case LF:
-					case LS:
-					case PS:
-						this.line++;
-						this.lineBefore = true;
-						return null;
 					case '/':
 						{
-							var n = this.lookahead();
-							if (n == '/') {
-								this.state = stateSingleLineComment;
-								return null;
-							} else if (n == '*') {
-								this.state = stateMultiLineComment;
-								return null;
-							} else if (n == '=') {
-								this.next();
+							if (lookahead(this) == '=') {
+								nextChar(this);
 								return new Token('/=');
 							} else {
 								return new Token('/');
 							}
 						}
-					case '$':
-					case '_':
-						{
-							this.buffer = next;
-							this.escaped = false;
-							this.state = stateIdentifierPart;
-							return null;
-						}
 					case '\\':
 						{
-							if (this.next() != 'u') {
-								throw new SyntaxError("Expected unicode escape sequence");
-							}
-							var val = this.dealUnicodeEscapeSequence();
-							if (val != '_' && val != '$') {
-								switch (type(val)) {
-									case 'UPPERCASE_LETTER':
-									case 'LOWERCASE_LETTER':
-									case 'TITLECASE_LETTER':
-									case 'MODIFIER_LETTER':
-									case 'OTHER_LETTER':
-									case 'LETTER_NUMBER':
-										{
-											break;
-										}
-									default:
-										throw new SyntaxError("Illegal unicode escape sequence as identifier start");
-								}
-							}
-							this.buffer = val;
-							this.escaped = true;
-							this.state = stateIdentifierPart;
-							return null;
+							pushback(this);
+							return this.nextIdentifier();
 						}
 					case '.':
 						{
-							var nch = this.lookahead();
+							var nch = lookahead(this);
 							if (nch >= '0' && nch <= '9') {
-								this.state = stateDecimal;
-								this.buffer = {
-									number: 0,
-									decimalLen: 0
-								};
-								return null;
+								pushback(this);
+								return this.nextDecimal();
 							}
 						}
 					case '{':
@@ -1458,14 +1507,14 @@
 						}
 					case '<':
 						{
-							var nch = this.lookahead();
+							var nch = lookahead(this);
 							if (nch == '=') {
-								this.next();
+								nextChar(this);
 								return new Token('<=');
 							} else if (nch == '<') {
-								this.next();
-								if (this.lookahead() == '=') {
-									this.next();
+								nextChar(this);
+								if (lookahead(this) == '=') {
+									nextChar(this);
 									return new Token('<<=');
 								} else {
 									return new Token('<<');
@@ -1476,20 +1525,20 @@
 						}
 					case '>':
 						{
-							var nch = this.lookahead();
+							var nch = lookahead(this);
 							if (nch == '=') {
-								this.next();
+								nextChar(this);
 								return new Token(">=");
 							} else if (nch == '>') {
-								this.next();
-								var n2ch = this.lookahead();
+								nextChar(this);
+								var n2ch = lookahead(this);
 								if (n2ch == '=') {
-									this.next();
+									nextChar(this);
 									return new Token(">>=");
 								} else if (n2ch == '>') {
-									this.next();
-									if (this.lookahead() == '=') {
-										this.next();
+									nextChar(this);
+									if (lookahead(this) == '=') {
+										nextChar(this);
 										return new Token(">>>=");
 									} else {
 										return new Token('>>>');
@@ -1504,10 +1553,10 @@
 					case '=':
 					case '!':
 						{
-							if (this.lookahead() == '=') {
-								this.next();
-								if (this.lookahead() == '=') {
-									this.next();
+							if (lookahead(this) == '=') {
+								nextChar(this);
+								if (lookahead(this) == '=') {
+									nextChar(this);
 									return new Token(next + "==");
 								} else {
 									return new Token(next + "=");
@@ -1521,12 +1570,12 @@
 					case '&':
 					case '|':
 						{
-							var nch = this.lookahead();
+							var nch = lookahead(this);
 							if (nch == '=') {
-								this.next();
+								nextChar(this);
 								return new Token(next + "=");
 							} else if (nch == next) {
-								this.next();
+								nextChar(this);
 								return new Token(next + next);
 							} else {
 								return new Token(next);
@@ -1536,8 +1585,8 @@
 					case '%':
 					case '^':
 						{
-							if (this.lookahead() == '=') {
-								this.next();
+							if (lookahead(this) == '=') {
+								nextChar(this);
 								return new Token(next + '=');
 							} else {
 								return new Token(next);
@@ -1545,20 +1594,14 @@
 						}
 					case '0':
 						{
-							var nch = this.lookahead();
+							var nch = lookahead(this);
+							pushback(this);
 							if (nch == 'x' || nch == 'X') {
-								this.next();
-								this.state = stateHexIntegerLiteral;
-								this.buffer = {
-									number: 0
-								};
-								return null;
+								return this.nextHexInteger();
 							} else if (nch >= '0' && nch <= '9') {
-								this.state = stateOctIntegerLiteral;
-								this.buffer = {
-									number: 0
-								};
-								return null;
+								return this.nextOctInteger();
+							} else {
+								return this.nextDecimal();
 							}
 						}
 					case '1':
@@ -1571,24 +1614,14 @@
 					case '8':
 					case '9':
 						{
-							this.state = stateDecLiteral;
-							this.buffer = {
-								number: subChar(next, '0'),
-								decimalLen: 0
-							};
-							return null;
+							pushback(this);
+							return this.nextDecimal();
 						}
 					case '"':
-						{
-							this.state = stateDoubleString;
-							this.buffer = "";
-							return null;
-						}
 					case '\'':
 						{
-							this.state = stateSingleString;
-							this.buffer = "";
-							return null;
+							pushback(this);
+							return this.nextString();
 						}
 					case '\uFFFF':
 						{
@@ -1597,649 +1630,422 @@
 							return token;
 						}
 				}
-				switch (type(next)) {
-					case 'SPACE_SEPARATOR':
-					case 'UPPERCASE_LETTER':
-					case 'LOWERCASE_LETTER':
-					case 'TITLECASE_LETTER':
-					case 'MODIFIER_LETTER':
-					case 'OTHER_LETTER':
-					case 'LETTER_NUMBER':
-						{
-							this.buffer = next;
-							this.escaped = false;
-							this.state = stateIdentifierPart;
-							return null;
-						}
+				if (this.isIdentfierStart(next)) {
+					pushback(this);
+					return this.nextIdentifier();
 				}
 				throw new SyntaxError("Unexpected source character");
 			}
 
-			function stateSingleLineComment() {
-				var next = this.lookahead();
-				switch (next) {
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-					case '\uFFFF':
-						{
-							this.state = stateDefault;
+			Lex.prototype.nextLineComment = function() {
+				assertNext(this, '/');
+				assertNext(this, '/');
+				while (true) {
+					var next = nextChar(this);
+					switch (next) {
+						case CR:
+						case LF:
+						case LS:
+						case PS:
+							{
+								this.line++;
+								this.lineBefore = true;
+								return null;
+							}
+						case '\uFFFF':
 							return null;
-						}
+					}
 				}
-				this.next();
-				return null;
 			}
 
-			function stateMultiLineComment() {
-				var next = this.next();
-				switch (next) {
-					case '*':
-						{
-							if (this.lookahead() == '/') {
-								this.next();
-								this.state = stateDefault;
+			Lex.prototype.nextBlockComment = function() {
+				assertNext(this, '/');
+				assertNext(this, '*');
+				while (true) {
+					var next = nextChar(this);
+					switch (next) {
+						case '*':
+							if (lookahead(this) == '/') {
+								nextChar(this);
+								return null;
 							}
-							return null;
-						}
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-						{
+							break;
+						case CR:
+						case LF:
+						case LS:
+						case PS:
 							this.line++;
 							this.lineBefore = true;
 							break;
-						}
-					case '\uFFFF':
-						{
-							throw new SyntaxError("Multi-line comment is not enclosed");
-						}
-				}
-				return null;
-			}
-
-			function stateIdentifierPart() {
-				var next = this.lookahead();
-				switch (next) {
-					case '$':
-					case '_':
-					case ZWNJ:
-					case ZWJ:
-						{
-							this.next();
-							this.buffer += next;
-							return null;
-						}
-					case '\\':
-						{
-							this.next();
-							if (this.next() != 'u') {
-								throw new SyntaxError("Expected unicode escape sequence");
-							}
-							var val = this.dealUnicodeEscapeSequence();
-							if (val != '_' && val != '$' && val != ZWNJ && val != ZWJ) {
-								switch (type(val)) {
-									case 'UPPERCASE_LETTER':
-									case 'LOWERCASE_LETTER':
-									case 'TITLECASE_LETTER':
-									case 'MODIFIER_LETTER':
-									case 'OTHER_LETTER':
-									case 'LETTER_NUMBER':
-									case 'CONNECTOR_PUNCTUATION':
-									case 'DECIMAL_DIGIT_NUMBER':
-									case 'NON_SPACING_MARK':
-									case 'COMBINING_SPACING_MARK':
-										{
-											break;
-										}
-									default:
-										throw new SyntaxError("Illegal unicode escape sequence as identifier part");
-								}
-							}
-							this.buffer += val;
-							this.escaped = true;
-							return null;
-						}
-				}
-				switch (type(next)) {
-					case 'UPPERCASE_LETTER':
-					case 'LOWERCASE_LETTER':
-					case 'TITLECASE_LETTER':
-					case 'MODIFIER_LETTER':
-					case 'OTHER_LETTER':
-					case 'LETTER_NUMBER':
-					case 'CONNECTOR_PUNCTUATION':
-					case 'DECIMAL_DIGIT_NUMBER':
-					case 'NON_SPACING_MARK':
-					case 'COMBINING_SPACING_MARK':
-						{
-							this.next();
-							this.buffer += next;
-							return null;
-						}
-				}
-				this.state = stateDefault;
-
-				if (!this.parseId || this.escaped) {
-					var token = new Token('id');
-					token.value = this.buffer;
-					this.buffer = null;
-					return token;
-				}
-
-				var ttype = lookupKeyword(this.buffer);
-				if (ttype == 'reserved-strict') {
-					var token = new Token('id');
-					token.value = this.buffer;
-					token.noStrict = 'Reserved word cannot be used as identifiers';
-					this.buffer = null;
-					return token;
-				}
-				if (!ttype) {
-					var token = new Token('id');
-					token.value = this.buffer;
-					this.buffer = null;
-					return token;
-				} else if (ttype == 'reserved') {
-					throw new SyntaxError("Reserved word cannot be used as identifiers");
-				} else {
-					this.buffer = null;
-					return new Token(ttype);
+						case '\uFFFF':
+							throw new SyntaxError("Block comment is not enclosed");
+					}
 				}
 			}
 
-			function stateOctIntegerLiteral() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '7') {
-					this.next();
-					this.buffer.number = this.buffer.number * 8 + subChar(next, '0');
-				} else {
-					if (next == '8' || next == '9' || next == '$' || next == '_' || next == '\\') {
-						throw new SyntaxError("Unexpected character after number literal");
+			Lex.prototype.nextIdentifier = function() {
+				var escaped = false;
+				var id = nextChar(this);
+				if (id == '\\') {
+					if (nextChar(this) != 'u') {
+						throw new SyntaxError("Expected unicode escape sequence");
 					}
-					switch (type(next)) {
-						case 'UPPERCASE_LETTER':
-						case 'LOWERCASE_LETTER':
-						case 'TITLECASE_LETTER':
-						case 'MODIFIER_LETTER':
-						case 'OTHER_LETTER':
-						case 'LETTER_NUMBER':
-							throw new SyntaxError("Unexpected character after number literal");
+					id = this.dealUnicodeEscapeSequence();
+					if (!this.isIdentfierStart(id)) {
+						throw new SyntaxError("Illegal unicode escape sequence as identifier start");
 					}
-					this.state = stateDefault;
-					var token = new Token('num');
-					token.value = this.buffer.number;
-					token.noStrict = "Octal literals are not allowed in strict mode";
-					this.buffer = null;
-					return token;
+					escaped = true;
+				} else if (!this.isIdentfierPart(id)) {
+					throw new Error('Assertion Error');
 				}
-				return null;
-			}
-
-			function stateHexIntegerLiteral() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '9') {
-					this.next();
-					this.buffer.number = this.buffer.number * 16 + subChar(next, '0');
-				} else if (next >= 'a' && next <= 'f') {
-					this.next();
-					this.buffer.number = this.buffer.number * 16 + (10 + subChar(next, 'a'));
-				} else if (next >= 'A' && next <= 'F') {
-					this.next();
-					this.buffer.number = this.buffer.number * 16 + (10 + subChar(next, 'A'));
-				} else {
-					if (next == '$' || next == '_' || next == '\\') {
-						throw new SyntaxError("Unexpected character after number literal");
-					}
-					switch (type(next)) {
-						case 'UPPERCASE_LETTER':
-						case 'LOWERCASE_LETTER':
-						case 'TITLECASE_LETTER':
-						case 'MODIFIER_LETTER':
-						case 'OTHER_LETTER':
-						case 'LETTER_NUMBER':
-							throw new SyntaxError("Unexpected character after number literal");
-					}
-					this.state = stateDefault;
-					var token = new Token('num');
-					token.value = this.buffer.number;
-					this.buffer = null;
-					return token;
-				}
-				return null;
-			}
-
-			function stateDecLiteral() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '9') {
-					this.next();
-					this.buffer.number = this.buffer.number * 10. + subChar(next, '0');
-				} else if (next == '.') {
-					this.next();
-					this.state = stateDecimal;
-					return null;
-				} else if (next == 'e' || next == 'E') {
-					this.next();
-					this.state = stateExpSign;
-				} else {
-					if (next == '$' || next == '_' || next == '\\') {
-						throw new SyntaxError("Unexpected character after number literal");
-					}
-					switch (type(next)) {
-						case 'UPPERCASE_LETTER':
-						case 'LOWERCASE_LETTER':
-						case 'TITLECASE_LETTER':
-						case 'MODIFIER_LETTER':
-						case 'OTHER_LETTER':
-						case 'LETTER_NUMBER':
-							throw new SyntaxError("Unexpected character after number literal");
-					}
-					this.state = stateDefault;
-					var token = new Token('num');
-					token.value = this.buffer.number;
-					this.buffer = null;
-					return token;
-				}
-				return null;
-			}
-
-			function stateDecimal() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '9') {
-					this.next();
-					this.buffer.number = this.buffer.number * 10 + subChar(next, '0');
-					this.buffer.decimalLen++;
-				} else if (next == 'e' || next == 'E') {
-					this.next();
-					this.state = stateExpSign;
-				} else {
-					if (next == '$' || next == '_' || next == '\\') {
-						throw new SyntaxError("Unexpected character after number literal");
-					}
-					switch (type(next)) {
-						case 'UPPERCASE_LETTER':
-						case 'LOWERCASE_LETTER':
-						case 'TITLECASE_LETTER':
-						case 'MODIFIER_LETTER':
-						case 'OTHER_LETTER':
-						case 'LETTER_NUMBER':
-							throw new SyntaxError("Unexpected character after number literal");
-					}
-					this.state = stateDefault;
-					var token = new Token('num');
-					token.value = this.buffer.number * Math.pow(10, -this.buffer.decimalLen);
-					this.buffer = null;
-					return token;
-				}
-				return null;
-			}
-
-			function stateExpSign() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '9') {
-					this.buffer.sign = true;
-				} else if (next == '+') {
-					this.next();
-					this.buffer.sign = true;
-				} else if (next == '-') {
-					this.next();
-					this.buffer.sign = false;
-				} else {
-					throw new SyntaxError("Expected +, - or digits after the exponential mark");
-				}
-				this.buffer.expPart = 0;
-				this.state = stateExpPart;
-				return null;
-			}
-
-			function stateExpPart() {
-				var next = this.lookahead();
-				if (next >= '0' && next <= '9') {
-					this.next();
-					this.buffer.expPart = this.buffer.expPart * 10 + subChar(next, '0');
-				} else {
-					if (next == '$' || next == '_' || next == '\\') {
-						throw new SyntaxError("Unexpected character after number literal");
-					}
-					switch (type(next)) {
-						case 'UPPERCASE_LETTER':
-						case 'LOWERCASE_LETTER':
-						case 'TITLECASE_LETTER':
-						case 'MODIFIER_LETTER':
-						case 'OTHER_LETTER':
-						case 'LETTER_NUMBER':
-							throw new SyntaxError("Unexpected character after number literal");
-					}
-					this.state = stateDefault;
-					var token = new Token('num');
-					var expPart = (this.buffer.sign ? 1 : -1) * this.buffer.expPart - this.buffer.decimalLen;
-					token.value = this.buffer.number * Math.pow(10, expPart);
-					return token;
-				}
-				return null;
-			}
-
-			Lex.prototype.dealEscapeSequence = function() {
-				var next = this.next();
-				switch (next) {
-					case CR:
-						{
-							if (this.lookahead() == LF) {
-								this.next(lex);
-								return;
-							}
+				while (true) {
+					var next = nextChar(this);
+					if (next == '\\') {
+						if (nextChar(this) != 'u') {
+							throw new SyntaxError("Expected unicode escape sequence");
 						}
-					case LF:
-					case LS:
-					case PS:
-						this.line++;
-						return;
-					case '\'':
-						this.buffer += '\'';
-						return;
-					case '"':
-						this.buffer += '"';
-						return;
-					case '\\':
-						this.buffer += '\\';
-						return;
-					case 'b':
-						this.buffer += '\b';
-						return;
-					case 'f':
-						this.buffer += '\f';
-						return;
-					case 'n':
-						this.buffer += '\n';
-						return;
-					case 'r':
-						this.buffer += '\r';
-						return;
-					case 't':
-						this.buffer += '\t';
-						return;
-					case 'v':
-						this.buffer += '\v';
-						return;
-					case '0':
-						{
-							var ll1 = this.lookahead();
-							if (ll1 < '0' || ll1 > '7') {
-								this.buffer += '\0';
-								return;
-							}
+						var val = this.dealUnicodeEscapeSequence();
+						if (!this.isIdentfierPart(val)) {
+							throw new SyntaxError("Illegal unicode escape sequence as identifier part");
 						}
-					case '1':
-					case '2':
-					case '3':
-					case '4':
-					case '5':
-					case '6':
-					case '7':
-						{
-							//if (this.strictMode) {
-							throw new SyntaxError("Octal escape sequence are not allowed in strict mode");
-							//}
-							/*var ll1 = this.lookahead();
-							if (ll1 < '0' || ll1 > '7') {
-								this.buffer += char(subChar(next, '0'));
-								return;
-							}
-							this.next();
-							var ll2 = this.lookahead();
-							if (ll2 < '0' || ll2 > '9') {
-								appendToBuffer(, next - '0');
-								return;
-							}*/
-							throw 'Unexpected';
-						}
-
-					case 'x':
-						{
-							var d;
-							var val = 0;
-							for (var i = 0; i < 2; i++) {
-								val *= 16;
-								d = this.next();
-								if (d >= '0' && d <= '9') {
-									val += subChar(d, '0');
-								} else if (d >= 'A' && d <= 'F') {
-									val += subChar(d, 'A') + 10;
-								} else if (d >= 'a' && d <= 'f') {
-									val += subChar(d, 'a') + 10;
-								} else {
-									throw new SyntaxError("Expected hex digits in hexical escape sequence");
-								}
-							}
-							this.buffer += char(val);
-							return;
-						}
-					case 'u':
-						{
-							this.buffer += this.dealUnicodeEscapeSequence();
-							return;
-						}
-					default:
-						this.buffer += next;
-						return;
-				}
-			}
-
-			function stateDoubleString() {
-				var next = this.next();
-				switch (next) {
-					case '"':
-						{
-							this.state = stateDefault;
-							var token = new Token('str');
-							token.value = this.buffer;
-							this.buffer = null;
+						escaped = true;
+						id += val;
+					} else if (this.isIdentfierPart(next)) {
+						id += next;
+					} else {
+						pushback(this);
+						if (!this.parseId || escaped) {
+							var token = new Token('id');
+							token.value = id;
 							return token;
 						}
-					case '\\':
-						{
-							this.dealEscapeSequence();
-							return null;
-						}
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-					case '\uFFFF':
-						throw new SyntaxError("String literal is not enclosed");
-					default:
-						{
-							this.buffer += next;
-							return null;
-						}
-				}
-			}
 
-			function stateSingleString() {
-				var next = this.next();
-				switch (next) {
-					case '\'':
-						{
-							this.state = stateDefault;
-							var token = new Token('str');
-							token.value = this.buffer;
-							this.buffer = null;
+						if (this.isStrictModeReserved(id)) {
+							var token = new Token('id');
+							token.value = id;
+							token.noStrict = 'Reserved word cannot be used as identifiers';
+							return token;
+						} else if (this.isReserved(id)) {
+							throw new SyntaxError("Reserved word cannot be used as identifiers");
+						} else if (this.isKeyword(id)) {
+							return new Token(id);
+						} else {
+							var token = new Token('id');
+							token.value = id;
 							return token;
 						}
-					case '\\':
-						{
-							this.dealEscapeSequence();
-							return null;
-						}
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-					case '\uFFFF':
-						throw new SyntaxError("String literal is not enclosed");
-					default:
-						{
-							this.buffer += next;
-							return null;
-						}
+					}
 				}
 			}
 
-			function stateRegexpChar() {
-				var nxt = this.next();
-				switch (nxt) {
-					case '/':
-						this.state = stateRegexpFlags;
-						this.buffer = {
-							content: this.buffer,
-							flags: ""
-						};
-						return null;
-					case '\\':
-						nxt = this.next();
-						switch (nxt) {
-							case CR:
-							case LF:
-							case LS:
-							case PS:
-							case '\uFFFF':
-								throw new SyntaxError("Regexp literal is not enclosed");
+			Lex.prototype.nextOctInteger = function() {
+				assertNext(this, '0');
+				var raw = "";
+				while (true) {
+					var next = nextChar(this);
+					if (next >= '0' && next <= '7') {
+						raw += next;
+					} else {
+						pushback(this);
+						if (next == '8' || next == '9' || next == '\\' || this.isIdentfierStart(next)) {
+							throw new SyntaxError("Unexpected character after number literal");
 						}
-						this.buffer += '\\' + nxt;
-						return null;
-					case '[':
-						this.buffer += '[';
-						this.state = stateRegexpClassChar;
-						return null;
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-					case '\uFFFF':
-						throw new SyntaxError("Regexp literal is not enclosed");
-					default:
-						this.buffer += nxt;
-						return null;
+						var token = new Token('num');
+						token.value = parseInt(raw, 8);
+						token.noStrict = "Octal literals are not allowed in strict mode";
+						return token;
+					}
 				}
 			}
 
-			function stateRegexpClassChar() {
-				var nxt = this.next();
-				switch (nxt) {
-					case ']':
-						this.buffer += ']';
-						this.state = stateRegexpChar;
-						return null;
-					case '\\':
-						nxt = this.next();
-						switch (nxt) {
-							case CR:
-							case LF:
-							case LS:
-							case PS:
-							case '\uFFFF':
-								throw new SyntaxError("Regexp literal is not enclosed");
+			Lex.prototype.nextHexInteger = function() {
+				assertNext(this, '0');
+				assertNext(this, 'xX');
+				var rawNumber = "";
+				while (true) {
+					var next = nextChar(this);
+					if (this.isHexDigit(next)) {
+						rawNumber += next;
+					} else {
+						pushback(this);
+						if (next == '\\' || this.isIdentfierStart(next)) {
+							throw new SyntaxError("Unexpected character after number literal");
 						}
-						this.buffer += '\\' + nxt;
-						return null;
-					case CR:
-					case LF:
-					case LS:
-					case PS:
-					case '\uFFFF':
-						throw new SyntaxError("Regexp literal is not enclosed");
-						return null;
-					default:
-						this.buffer += nxt;
-						return null;
+						var token = new Token('num');
+						token.value = parseInt(rawNumber, 16);
+						return token;
+					}
 				}
 			}
 
-			function stateRegexpFlags() {
-				var next = this.lookahead();
-				switch (next) {
-					case '$':
-					case '_':
-					case ZWNJ:
-					case ZWJ:
-						{
-							this.next();
-							this.buffer.flags += next;
-							return null;
+			Lex.prototype.nextDecimal = function() {
+				var that = this;
+
+				function decimal() {
+					var decimal = "";
+					while (true) {
+						var next = nextChar(that);
+						if (next >= '0' && next <= '9') {
+							decimal += next;
+						} else {
+							pushback(that);
+							return decimal;
 						}
-					case '\\':
-						{
-							this.next();
-							if (this.next() != 'u') {
-								throw new SyntaxError("Expected unicode escape sequence");
-							}
-							var val = this.dealUnicodeEscapeSequence();
-							if (val != '_' && val != '$' && val != ZWNJ && val != ZWJ) {
-								switch (type(val)) {
-									case 'UPPERCASE_LETTER':
-									case 'LOWERCASE_LETTER':
-									case 'TITLECASE_LETTER':
-									case 'MODIFIER_LETTER':
-									case 'OTHER_LETTER':
-									case 'LETTER_NUMBER':
-									case 'CONNECTOR_PUNCTUATION':
-									case 'DECIMAL_DIGIT_NUMBER':
-									case 'NON_SPACING_MARK':
-									case 'COMBINING_SPACING_MARK':
-										{
-											break;
-										}
-									default:
-										throw new SyntaxError("Illegal Identifier Part in regexp flags");
-								}
-							}
-							this.buffer.flags += val;
-							return null;
-						}
+					}
 				}
-				switch (type(next)) {
-					case 'UPPERCASE_LETTER':
-					case 'LOWERCASE_LETTER':
-					case 'TITLECASE_LETTER':
-					case 'MODIFIER_LETTER':
-					case 'OTHER_LETTER':
-					case 'LETTER_NUMBER':
-					case 'CONNECTOR_PUNCTUATION':
-					case 'DECIMAL_DIGIT_NUMBER':
-					case 'NON_SPACING_MARK':
-					case 'COMBINING_SPACING_MARK':
-						{
-							this.next();
-							this.buffer.flags += next;
-							return null;
+
+				function exp() {
+					that.assertNext("eE");
+					var next = lookahead(that);
+					var sign = "+";
+					if (next == '+' || next == '-') {
+						sign = nextChar(that);
+					}
+					var expPart = "";
+					while (true) {
+						var next = nextChar(that);
+						if (next >= '0' && next <= '9') {
+							expPart += next;
+						} else {
+							break;
 						}
+					}
+					pushback(that);
+					if (!expPart.length) {
+						throw new SyntaxError("Expected +, - or digits after the exponential mark");
+					}
+					return "e" + sign + expPart;
 				}
-				this.state = stateDefault;
-				var token = new Token('regexp');
-				token.regexp = this.buffer.content;
-				token.flags = this.buffer.flags;
-				this.buffer = null;
+				var raw = decimal();
+				if (raw) {
+					var next = lookahead(this);
+					if (next == '.') {
+						nextChar(this);
+						raw += '.';
+						raw += decimal();
+						next = lookahead(this);
+						if (next == 'e' || next == 'E') {
+							raw += exp();
+						}
+					} else if (next == 'e' || next == 'E') {
+						raw += exp();
+					}
+				} else {
+					assertNext(this, '.');
+					var dec = decimal();
+					assert(dec);
+					raw = "." + dec;
+					next = lookahead(this);
+					if (next == 'e' || next == 'E') {
+						raw += exp();
+					}
+				}
+				next = lookahead(this);
+				if (next == '\\' || this.isIdentfierStart(next)) {
+					throw new SyntaxError("Unexpected character after number literal");
+				}
+				var token = new Token('num');
+				token.value = parseFloat(raw);
 				return token;
 			}
 
-			Lex.prototype.nextToken = function() {
-				var startPtr;
-				var startLine;
+			Lex.prototype.nextString = function() {
+				var quote = assertNext(this, '\'"');
+				var value = "";
 				while (true) {
-					if (this.state == stateDefault) {
-						startPtr = this.ptr;
-						startLine = this.line;
+					var next = nextChar(this);
+					switch (next) {
+						case quote:
+							var token = new Token('str');
+							token.value = value;
+							return token;
+						case '\\':
+							next = nextChar(this);
+							switch (next) {
+								case CR:
+									if (lookahead(this) == LF) {
+										nextChar(this);
+										break;
+									}
+								case LF:
+								case LS:
+								case PS:
+									this.line++;
+									break;
+								case '\'':
+									value += '\'';
+									break
+								case '"':
+									value += '"';
+									break;
+								case '\\':
+									value += '\\';
+									break;
+								case 'b':
+									value += '\b';
+									break;
+								case 'f':
+									value += '\f';
+									break;
+								case 'n':
+									value += '\n';
+									break;
+								case 'r':
+									value += '\r';
+									break;
+								case 't':
+									value += '\t';
+									break;
+								case 'v':
+									value += '\v';
+									break;
+								case '0':
+									{
+										var ll1 = lookahead(this);
+										if (ll1 < '0' || ll1 > '7') {
+											value += '\0';
+											break;
+										}
+									}
+								case '1':
+								case '2':
+								case '3':
+								case '4':
+								case '5':
+								case '6':
+								case '7':
+									{
+										//if (this.strictMode) {
+										throw new SyntaxError("Octal escape sequence are not allowed in strict mode");
+										//}
+										/*var ll1 = lookahead(this);
+										if (ll1 < '0' || ll1 > '7') {
+											this.buffer += char(subChar(next, '0'));
+											return;
+										}
+										nextChar(this);
+										var ll2 = lookahead(this);
+										if (ll2 < '0' || ll2 > '9') {
+											appendToBuffer(, next - '0');
+											return;
+										}*/
+									}
+
+								case 'x':
+									var d;
+									var val = 0;
+									for (var i = 0; i < 2; i++) {
+										val *= 16;
+										d = nextChar(this);
+										if (d >= '0' && d <= '9') {
+											val += subChar(d, '0');
+										} else if (d >= 'A' && d <= 'F') {
+											val += subChar(d, 'A') + 10;
+										} else if (d >= 'a' && d <= 'f') {
+											val += subChar(d, 'a') + 10;
+										} else {
+											throw new SyntaxError("Expected hex digits in hexical escape sequence");
+										}
+									}
+									value += char(val);
+									break;
+								case 'u':
+									value += this.dealUnicodeEscapeSequence();
+									break;
+								default:
+									value += next;
+									break
+							}
+							break;
+						case CR:
+						case LF:
+						case LS:
+						case PS:
+						case '\uFFFF':
+							throw new SyntaxError("String literal is not enclosed");
+						default:
+							value += next;
+							break;
 					}
-					var ret = this.state();
-					if (ret) {
-						if (this.lineBefore) {
-							ret.lineBefore = this.lineBefore;
-							this.lineBefore = false;
+				}
+			}
+
+			Lex.prototype.nextRawRegexp = function() {
+				assertNext(this, '/');
+				var regexp = "";
+				var inClass = false;
+				loop: while (true) {
+					var nxt = nextChar(this);
+					switch (nxt) {
+						case '/':
+							if (inClass) {
+								regexp += '/';
+								break;
+							}
+							break loop;
+						case '\\':
+							nxt = nextChar(this);
+							switch (nxt) {
+								case CR:
+								case LF:
+								case LS:
+								case PS:
+								case '\uFFFF':
+									throw new SyntaxError("Regexp literal is not enclosed");
+							}
+							regexp += '\\' + nxt;
+							break;
+						case '[':
+							regexp += '[';
+							inClass = true;
+							break;
+						case ']':
+							regexp += ']';
+							inClass = false;
+							break;
+						case CR:
+						case LF:
+						case LS:
+						case PS:
+						case '\uFFFF':
+							throw new SyntaxError("Regexp literal is not enclosed");
+						default:
+							regexp += nxt;
+							break;
+					}
+				}
+				var flags = "";
+				while (true) {
+					var next = nextChar(this);
+					if (next == '\\') {
+						if (nextChar(this) != 'u') {
+							throw new SyntaxError("Expected unicode escape sequence");
 						}
-						break;
+						next = this.dealUnicodeEscapeSequence();
+						if (!this.isIdentfierPart(next)) {
+							throw new SyntaxError("Illegal identifier part in regexp flags");
+						}
+						flags += next;
+					} else if (this.isIdentfierPart(next)) {
+						flags += next;
+					} else {
+						pushback(this);
+						var token = new Token('regexp');
+						token.regexp = regexp;
+						token.flags = flags;
+						return token;
 					}
+				}
+			}
+
+			Lex.prototype.nextToken = function() {
+				this.proceedSpaces();
+				var startPtr = this.ptr;
+				var startLine = this.line;
+				var ret = this.nextRawToken();
+				if (this.lineBefore) {
+					ret.lineBefore = this.lineBefore;
+					this.lineBefore = false;
 				}
 				ret.startPtr = startPtr;
 				ret.startLine = startLine;
@@ -2249,10 +2055,18 @@
 			}
 
 			Lex.prototype.nextRegexp = function(tk) {
-				this.buffer = tk.type.substr(1);
-				this.state = stateRegexpChar;
-				var ret = this.nextToken();
-				ret.startPtr -= tk.type.length;
+				pushback(this, tk.type.length);
+				var startPtr = this.ptr;
+				var startLine = this.line;
+				var ret = this.nextRawRegexp();
+				if (this.lineBefore) {
+					ret.lineBefore = this.lineBefore;
+					this.lineBefore = false;
+				}
+				ret.startPtr = startPtr;
+				ret.startLine = startLine;
+				ret.endPtr = this.ptr;
+				ret.endLine = this.line;
 				return ret;
 			}
 
@@ -2269,6 +2083,7 @@
 		var NorlitJSCompiler = require("../compiler");
 
 		function minifyNumber(num) {
+
 			function fraction(x) {
 				var abs = Math.abs(x);
 				var sign = x / abs;
@@ -2286,7 +2101,7 @@
 				}
 				var t = recurs(fractional);
 				if (sign * t[0] / t[1] != x) {
-					return x;
+					return null;
 				}
 				return (sign == -1 ? '-' : '') + t[0] + "/" + t[1];
 			}
@@ -2298,7 +2113,7 @@
 				};
 			} else {
 				var fracStr = fraction(num);
-				return fracStr.length + 1 >= nstr.length ? {
+				return !fracStr || fracStr.length + 1 >= nstr.length ? {
 					str: nstr,
 					p: num < 0 ? 'UnaryExpression' : 'PrimaryExpression'
 				} : {
