@@ -2046,21 +2046,24 @@ function minifyNumber(num) {
     function fraction(x) {
         var abs = Math.abs(x);
         var sign = x / abs;
+        x = abs;
+        var stack = 0;
+        var fractional = abs;
 
-        function recursiveToFraction(number, stackDepth) {
-            var integerPart = Math.floor(number);
-            var decimalPart = number - integerPart;
-            if (decimalPart < 0.0001 || stackDepth > 20) return [integerPart, 1];
-            var num = recursiveToFraction(1 / decimalPart, stackDepth + 1);
-            return [integerPart * num[0] + num[1], num[0]]
+        function recurs(x) {
+            stack++;
+            var intgr = Math.floor(x);
+            var dec = (x - intgr);
+            if (dec < 0.0019 || stack > 20) return [intgr, 1];
+            var num = recurs(1 / dec);
+            return [intgr * num[0] + num[1], num[0]]
         }
-        var fraction = recursiveToFraction(abs, 0);
-        if (sign * fraction[0] / fraction[1] != x) {
+        var t = recurs(fractional);
+        if (sign * t[0] / t[1] != x) {
             return null;
         }
-        return (sign == -1 ? '-' : '') + fraction[0] + "/" + fraction[1];
+        return (sign == -1 ? '-' : '') + t[0] + "/" + t[1];
     }
-
     var nstr = num.toString();
     if (Math.floor(num) == num) {
         return {
@@ -2360,15 +2363,6 @@ function minify(ast) {
                         case 'typeof':
                             return {
                                 str: ast.operator + " " + wrap(minify(ast.operand), 'UnaryExpression').str,
-                                p: 'UnaryExpression'
-                            };
-                        case '+':
-                        case '-':
-                            var operand = wrap(minify(ast.operand), 'UnaryExpression').str;
-                            if (operand[0] == ast.operator)
-                                operand = ' ' + operand;
-                            return {
-                                str: ast.operator + operand,
                                 p: 'UnaryExpression'
                             };
                         default:

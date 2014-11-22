@@ -8,21 +8,18 @@
 <script>
 	function minify(){
 		try{
-			var str=NorlitJSCompiler.minify($('#text').codeEditor('text'));
-			$('#text').codeEditor('text', str);
+			var str=NorlitJSCompiler.minify($('#text').text());
+			$('#text').text(str);
 			$('.x-statusbar').text("Minified without error(s)");
 		}catch(e){
 			if(e instanceof SyntaxError){
 				$('.x-statusbar').text(e.toString());
 			}else{
 				$('.x-statusbar').text('Please report to the author: '+e);
-				console.log(e.stack);
-				throw e;
 			}
 		}
 	}
 </script>
-<link rel="stylesheet" href="codeeditor.css"/>
 <style>
 	html, body{
 		height: 100%;
@@ -88,6 +85,14 @@
 		padding-left:10px;
 		box-sizing:border-box;
 	}
+	.x-codeeditor{
+		white-space: pre;
+		font-family: monospace;
+		outline:none;
+		font-size:20px;
+		overflow-y:auto;
+		overflow-x:hidden;
+	}
 
 	#text{
 		box-sizing: border-box;
@@ -104,8 +109,7 @@
 	<span class="tabbutton" onclick="minify()">MINIFY</span>
 </div>
 <div class="x-main">
-  <div class="x-codeeditor" id="text">
-  </div>
+  <div class="x-codeeditor" id="text"></div>
 </div>
 <div class="x-statusbar">
 	Ready
