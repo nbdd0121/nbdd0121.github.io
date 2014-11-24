@@ -1187,6 +1187,10 @@ module.exports = function() {
 		try {
 			var ret = g.program();
 		} catch (e) {
+			e.detail = {
+				startOffset: g.buffer.length ? g.buffer[0].startPtr : g.lex.ptr,
+				endOffset: g.buffer.length ? g.buffer[0].endPtr : g.lex.ptr + 1
+			};
 			e.message = 'Line ' + (g.buffer.length ? g.buffer[0].startLine : g.lex.line) + ': ' + e.message;
 			throw e;
 		}

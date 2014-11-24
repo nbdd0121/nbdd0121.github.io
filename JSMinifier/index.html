@@ -5,20 +5,25 @@
 <script src="NorlitJSCompiler.js"></script>
 <script src="../jquery/jquery.js"></script>
 <script src="../libs/orion/built-editor.js"></script>
+<script src="../libs/orion/custom-editor.js"></script>
 <script src="../jquery/jquery-orion.js"></script>
 <script>
 	$(function(){
 		$("#text").orion();
+		editor=$("#text")[0].orion;
 	});
+	var editor;
 </script>
 <script>
 	function minify(){
+		editor.removeAllAnnotationMarks();
 		try{
 			var str=NorlitJSCompiler.minify($('#text').orion('text'));
 			$('#text').orion('text', str);
 			$('.x-statusbar').text("Minified without error(s)");
 		}catch(e){
 			if(e instanceof SyntaxError){
+				editor.addAnnotationMark('error', e.toString(), e.detail.startOffset, e.detail.endOffset);
 				$('.x-statusbar').text(e.toString());
 			}else{
 				$('.x-statusbar').text('Please report to the author: '+e);
