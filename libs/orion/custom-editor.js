@@ -290,17 +290,27 @@ define("norlit/editor", [
 		"while", "with", "null", "true", "false"
 	];
 
+	function getType(id) {
+		if (id == "null") {
+			return "Null";
+		} else if (id == "true" || id == "false") {
+			return "Boolean";
+		} else {
+			return "";
+		}
+	}
+
 	exports.contentAssist = {
 		computeProposals: function(buffer, offset, context) {
 			console.log(arguments);
 			return keywords.filter(function(k) {
 				return k.indexOf(context.prefix) == 0;
 			}).map(function(k) {
+				var type = getType(k);
 				var proposal = {
 					proposal: k.substring(context.prefix.length),
-					description: k
+					description: type ? k + " : " + type : k
 				};
-				console.log(proposal);
 				return proposal;
 			});
 		}

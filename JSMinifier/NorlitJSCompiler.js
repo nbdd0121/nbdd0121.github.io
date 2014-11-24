@@ -1421,7 +1421,16 @@ module.exports = function() {
 						this.nextLineComment();
 						break;
 					} else if (n == '*') {
-						this.nextBlockComment();
+						var startPtr = this.ptr;
+						try {
+							this.nextBlockComment();
+						} catch (e) {
+							e.detail = {
+								startOffset: startPtr,
+								endOffset: this.ptr
+							};
+							throw e;
+						}
 						break;
 					} else {
 						return;
@@ -1645,6 +1654,7 @@ module.exports = function() {
 					this.lineBefore = true;
 					break;
 				case '\uFFFF':
+					pushback(this);
 					throw new SyntaxError("Block comment is not enclosed");
 			}
 		}
@@ -1929,6 +1939,7 @@ module.exports = function() {
 				case LS:
 				case PS:
 				case '\uFFFF':
+					pushback(this);
 					throw new SyntaxError("String literal is not enclosed");
 				default:
 					value += next;
@@ -1958,6 +1969,7 @@ module.exports = function() {
 						case LS:
 						case PS:
 						case '\uFFFF':
+							pushback(this);
 							throw new SyntaxError("Regexp literal is not enclosed");
 					}
 					regexp += '\\' + nxt;
@@ -1975,6 +1987,7 @@ module.exports = function() {
 				case LS:
 				case PS:
 				case '\uFFFF':
+					pushback(this);
 					throw new SyntaxError("Regexp literal is not enclosed");
 				default:
 					regexp += nxt;
@@ -2014,7 +2027,7 @@ module.exports = function() {
 		} catch (e) {
 			e.detail = {
 				startOffset: startPtr,
-				endOffset: this.ptr
+				endOffset: this.ptr + 1
 			};
 			throw e;
 		}
