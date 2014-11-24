@@ -43,7 +43,9 @@
 		}
 	}
 	$.fn.textOffset = function(node, offset) {
-		if (this.length != 1) throw new Error('Expected one element only');
+		if (this.length != 1) {
+			throw new Error('Expected one element only');
+		}
 		if (node[0] == this[0]) {
 			return offset;
 		}
@@ -99,10 +101,17 @@
 		var sel = window.getSelection();
 		var anchorNode = $(sel.anchorNode);
 		var firstNode = anchorNode.super(".x-ce-codeline");
-		return {
-			node: firstNode,
-			offset: firstNode.textOffset(anchorNode, sel.anchorOffset)
-		};
+		if (firstNode.length) {
+			return {
+				node: firstNode,
+				offset: firstNode.textOffset(anchorNode, sel.anchorOffset)
+			};
+		} else {
+			return {
+				node: anchorNode.children(".x-ce-codeline:first-child"),
+				offset: 0
+			};
+		}
 	}
 
 	function setRangeCollapsed(node, offset) {
@@ -136,9 +145,11 @@
 				case 8:
 					{
 						if (!isCollapsed()) {
+							console.log('re');
 							this.removeSelected();
 						}
 						var start = getSelectionStart();
+						console.log(start);
 						if (start.offset == 0) {
 							var prev = start.node.prev();
 							if (prev.length) {
@@ -150,6 +161,11 @@
 							} else {
 								console.log('Debug: Backspace will not work for first line');
 							}
+							event.preventDefault();
+						} else {
+							var text = start.node.text();
+							start.node.text(text.substr(0, start.offset - 1) + text.substr(start.offset));
+							setRangeCollapsed(start.node, start.offset - 1);
 							event.preventDefault();
 						}
 						break;
@@ -188,6 +204,14 @@
 					}
 					//default:
 					//	console.log("Unknown Key " + event.which);
+			}
+		}.bind(this));
+
+		this.panel.bind('click', function(event) {
+			if ($(event.target).is('.x-ce-panel')) {
+				var lastLine = $(this.object).find('.x-ce-codeline:last-child');
+				setRangeCollapsed(lastLine, lastLine.text().length);
+				event.preventDefault();
 			}
 		}.bind(this));
 
