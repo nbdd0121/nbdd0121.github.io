@@ -1187,10 +1187,11 @@ module.exports = function() {
 		try {
 			var ret = g.program();
 		} catch (e) {
-			e.detail = {
-				startOffset: g.buffer.length ? g.buffer[0].startPtr : g.lex.ptr,
-				endOffset: g.buffer.length ? g.buffer[0].endPtr : g.lex.ptr + 1
-			};
+			if (!e.detail)
+				e.detail = {
+					startOffset: g.buffer.length ? g.buffer[0].startPtr : g.lex.ptr,
+					endOffset: g.buffer.length ? g.buffer[0].endPtr : g.lex.ptr + 1
+				};
 			e.message = 'Line ' + (g.buffer.length ? g.buffer[0].startLine : g.lex.line) + ': ' + e.message;
 			throw e;
 		}
@@ -2008,7 +2009,15 @@ module.exports = function() {
 		this.proceedSpaces();
 		var startPtr = this.ptr;
 		var startLine = this.line;
-		var ret = this.nextRawToken();
+		try {
+			var ret = this.nextRawToken();
+		} catch (e) {
+			e.detail = {
+				startOffset: startPtr,
+				endOffset: this.ptr
+			};
+			throw e;
+		}
 		if (this.lineBefore) {
 			ret.lineBefore = this.lineBefore;
 			this.lineBefore = false;
@@ -2024,7 +2033,15 @@ module.exports = function() {
 		pushback(this, tk.type.length);
 		var startPtr = this.ptr;
 		var startLine = this.line;
-		var ret = this.nextRawRegexp();
+		try {
+			var ret = this.nextRawRegexp();
+		} catch (e) {
+			e.detail = {
+				startOffset: startPtr,
+				endOffset: this.ptr + 1
+			};
+			throw e;
+		}
 		if (this.lineBefore) {
 			ret.lineBefore = this.lineBefore;
 			this.lineBefore = false;
