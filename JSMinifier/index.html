@@ -15,21 +15,59 @@
 	var editor;
 </script>
 <script>
-	function minify(){
+	function validate(){
 		editor.removeAllAnnotationMarks();
+
+		var context = new NorlitJSCompiler.Context(true);
 		try{
-			var str=NorlitJSCompiler.minify($('#text').orion('text'));
-			$('#text').orion('text', str);
-			$('.x-statusbar').text("Minified without error(s)");
+			var ast = NorlitJSCompiler.Parser($("#text").orion('text'), context);
 		}catch(e){
 			if(e instanceof SyntaxError){
-				editor.addAnnotationMark('error', e.toString(), e.detail.startOffset, e.detail.endOffset);
-				$('.x-statusbar').text(e.toString());
+				context.throwError(e);
 			}else{
 				$('.x-statusbar').text('Please report to the author: '+e);
 				console.log(e.stack);
 				throw e;
 			}
+		}
+		if(!context.hasError()){
+			$('.x-statusbar').text("No syntactical errors are found");
+		}else{
+			context.errors.forEach(function(msg){
+				console.log(msg.detail);
+				editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
+			});
+			$('.x-statusbar').text(context.errors.length==1?'1 error is found':context.errors.length+' errors are found');
+		}
+	}
+	function minify(){
+		editor.removeAllAnnotationMarks();
+
+		var context = new NorlitJSCompiler.Context(true);
+		try{
+			var ast = NorlitJSCompiler.Parser($("#text").orion('text'), context);
+		}catch(e){
+			if(e instanceof SyntaxError){
+				context.throwError(e);
+			}else{
+				$('.x-statusbar').text('Please report to the author: '+e);
+				console.log(e.stack);
+				throw e;
+			}
+		}
+		if(!context.hasError()){
+			ast = NorlitJSCompiler.ASTPass.apply(ast);
+			var str = NorlitJSCompiler.minify(ast).str;
+			$('#text').orion('text', str);
+			$('.x-statusbar').text("Minified without errors");
+		}else{
+			context.errors.forEach(function(msg){
+				editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
+			});
+			$('.x-statusbar').text(
+				(context.errors.length==1?'1 error is':context.errors.length+' errors are')+
+				' found, minification failed'
+			);
 		}
 	}
 </script>
@@ -51,7 +89,6 @@
 		padding-left:20px;
 		cursor:default;
 		-webkit-user-select: none;
-		box-sizing:border-box;
 	}
 	.x-titlebar .title{
 		font-size: 24px;
@@ -65,7 +102,6 @@
 		-webkit-user-select: none;
 		color:#444444;
 		cursor:default;
-		box-sizing:border-box;
 	}
 	.x-menubar .tabbutton{
 		display: inline-block;
@@ -74,6 +110,7 @@
 		font-size: 12px;
 		padding-left: 8px;
 		padding-right: 8px;
+		text-transform: uppercase;
 	}
 	.x-menubar .tabbutton:first-child{
 		padding-left: 20px;
@@ -99,7 +136,6 @@
 		line-height: 22px;
 		border-top:lightgrey solid 1px;
 		padding-left:10px;
-		box-sizing:border-box;
 	}
 
 	#text{
@@ -109,6 +145,14 @@
 		height:100%;
 		font-size:14px;
 	}
+
+	::selection{
+		background: rgba(200, 200, 200,0.99);
+	}
+
+	::-moz-selection{
+		background: rgba(200, 200, 200,0.99);
+	}
 </style>
 </head>
 <body>
@@ -116,7 +160,8 @@
 	<span class="title">Norlit JS Compiler Tools<span style="font-size:15px;"> Beta</span></span>
 </div>
 <div class="x-menubar">
-	<span class="tabbutton" onclick="minify()">MINIFY</span>
+	<span class="tabbutton" onclick="validate()">Validate</span>
+	<span class="tabbutton" onclick="minify()">Minify</span>
 </div>
 <div class="x-main">
 <pre id="text" class="editor">

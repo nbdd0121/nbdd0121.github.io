@@ -47,6 +47,32 @@ module.exports = function() {
 'use strict';
 
 var NorlitJSCompiler = {};
+module.exports = NorlitJSCompiler;
+
+function Context(tolerance) {
+	this.errors = [];
+	this.tolerance = !!tolerance;
+}
+
+Context.prototype.throwError = function(error) {
+	if (this.tolerance) {
+		console.log('Error Tolerance', error.stack);
+		this.errors.push(error);
+	} else {
+		throw error;
+	}
+}
+
+Context.prototype.lastError = function() {
+	return this.errors[this.errors.length - 1];
+}
+
+Context.prototype.hasError = function() {
+	return this.errors.length;
+}
+
+NorlitJSCompiler.Context = Context;
+
 NorlitJSCompiler.CharType = require("./chartype");
 NorlitJSCompiler.Lex = require("./lex");
 NorlitJSCompiler.Parser = require("./grammar.js");
@@ -64,11 +90,10 @@ NorlitJSCompiler.ASTPass = (function() {
 	}
 	return ASTPass;
 })();
-module.exports = NorlitJSCompiler;
 
 require("./const.js");
 },{"./chartype":1,"./const.js":3,"./grammar.js":4,"./lex":5,"./visitor.js":7}],3:[function(require,module,exports){
-require("./compiler.js").ASTPass.register({
+require("./compiler").ASTPass.register({
 	leave: function(node, parent) {
 		switch (node.type) {
 			case 'BinaryExpression':
@@ -182,11 +207,12 @@ require("./compiler.js").ASTPass.register({
 	},
 	noLiteralVisit: true
 });
-},{"./compiler.js":2}],4:[function(require,module,exports){
+},{"./compiler":2}],4:[function(require,module,exports){
 'use strict';
 module.exports = function() {
-	function Grammar(lex) {
+	function Grammar(lex, context) {
 		this.lex = lex;
+		this.context = context;
 		this.buffer = [];
 		this.strictMode = false;
 	}
@@ -1182,15 +1208,15 @@ module.exports = function() {
 		return program;
 	}
 
-	return function(str) {
-		var g = new Grammar(new(require('./lex.js'))(str));
+	return function(str, context) {
+		var g = new Grammar(new(require('./lex'))(str, context), context);
 		try {
 			var ret = g.program();
 		} catch (e) {
 			if (!e.detail)
 				e.detail = {
-					startOffset: g.buffer.length ? g.buffer[0].startPtr : g.lex.ptr,
-					endOffset: g.buffer.length ? g.buffer[0].endPtr : g.lex.ptr + 1
+					startOffset: g.buffer.length ? g.buffer[0].startPtr - 1 : g.lex.ptr - 1,
+					endOffset: g.buffer.length ? g.buffer[0].endPtr - 1 : g.lex.ptr - 1
 				};
 			e.message = 'Line ' + (g.buffer.length ? g.buffer[0].startLine : g.lex.line) + ': ' + e.message;
 			throw e;
@@ -1198,11 +1224,11 @@ module.exports = function() {
 		return ret;
 	}
 }();
-},{"./lex.js":5}],5:[function(require,module,exports){
+},{"./lex":5}],5:[function(require,module,exports){
 'use strict';
 
 module.exports = function() {
-	var type = require('./chartype.js');
+	var type = require('./chartype');
 
 	var TAB = "\u0009",
 		VT = "\u000B",
@@ -1271,8 +1297,9 @@ module.exports = function() {
 		false: true
 	};
 
-	function Lex(str) {
+	function Lex(str, context) {
 		this.source = str;
+		this.context = context;
 		this.ptr = 0;
 		this.line = 1;
 		this.lineBefore = false;
@@ -1320,6 +1347,15 @@ module.exports = function() {
 
 	function pushback(lex, num) {
 		lex.ptr -= num || 1;
+	}
+
+	Lex.prototype.throwError = function(msg) {
+		var err = new SyntaxError(msg);
+		err.detail = {
+			startOffset: this.startPtr,
+			endOffset: this.ptr
+		};
+		this.context.throwError(err);
 	}
 
 	/* Character type classification */
@@ -1388,7 +1424,8 @@ module.exports = function() {
 			} else if (d >= 'a' && d <= 'f') {
 				val += subChar(d, 'a') + 10;
 			} else {
-				throw new SyntaxError("Expected hex digits in unicode escape sequence");
+				this.throwError("Expected hex digits in unicode escape sequence");
+				return "";
 			}
 		}
 		return char(val);
@@ -1421,16 +1458,8 @@ module.exports = function() {
 						this.nextLineComment();
 						break;
 					} else if (n == '*') {
-						var startPtr = this.ptr;
-						try {
-							this.nextBlockComment();
-						} catch (e) {
-							e.detail = {
-								startOffset: startPtr,
-								endOffset: this.ptr
-							};
-							throw e;
-						}
+						this.startPtr = this.ptr;
+						this.nextBlockComment();
 						break;
 					} else {
 						return;
@@ -1443,174 +1472,183 @@ module.exports = function() {
 	}
 
 	Lex.prototype.nextRawToken = function() {
-		var next = nextChar(this);
-		switch (next) {
-			case '/':
-				{
-					if (lookahead(this) == '=') {
-						nextChar(this);
-						return new Token('/=');
-					} else {
-						return new Token('/');
-					}
-				}
-			case '\\':
-				{
-					pushback(this);
-					return this.nextIdentifier();
-				}
-			case '.':
-				{
-					var nch = lookahead(this);
-					if (nch >= '0' && nch <= '9') {
-						pushback(this);
-						return this.nextDecimal();
-					}
-				}
-			case '{':
-			case '}':
-			case '(':
-			case ')':
-			case '[':
-			case ']':
-			case ';':
-			case ',':
-			case '~':
-			case '?':
-			case ':':
-				{
-					return new Token(next);
-				}
-			case '<':
-				{
-					var nch = lookahead(this);
-					if (nch == '=') {
-						nextChar(this);
-						return new Token('<=');
-					} else if (nch == '<') {
-						nextChar(this);
+		while (true) {
+			var next = nextChar(this);
+			switch (next) {
+				case '/':
+					{
 						if (lookahead(this) == '=') {
 							nextChar(this);
-							return new Token('<<=');
+							return new Token('/=');
 						} else {
-							return new Token('<<');
+							return new Token('/');
 						}
-					} else {
-						return new Token('<');
 					}
-				}
-			case '>':
-				{
-					var nch = lookahead(this);
-					if (nch == '=') {
-						nextChar(this);
-						return new Token(">=");
-					} else if (nch == '>') {
-						nextChar(this);
-						var n2ch = lookahead(this);
-						if (n2ch == '=') {
+				case '\\':
+					{
+						pushback(this);
+						return this.nextIdentifier();
+					}
+				case '.':
+					{
+						var nch = lookahead(this);
+						if (nch >= '0' && nch <= '9') {
+							pushback(this);
+							return this.nextDecimal();
+						}
+					}
+				case '{':
+				case '}':
+				case '(':
+				case ')':
+				case '[':
+				case ']':
+				case ';':
+				case ',':
+				case '~':
+				case '?':
+				case ':':
+					{
+						return new Token(next);
+					}
+				case '<':
+					{
+						var nch = lookahead(this);
+						if (nch == '=') {
 							nextChar(this);
-							return new Token(">>=");
-						} else if (n2ch == '>') {
+							return new Token('<=');
+						} else if (nch == '<') {
 							nextChar(this);
 							if (lookahead(this) == '=') {
 								nextChar(this);
-								return new Token(">>>=");
+								return new Token('<<=');
 							} else {
-								return new Token('>>>');
+								return new Token('<<');
 							}
 						} else {
-							return new Token('>>');
+							return new Token('<');
 						}
-					} else {
-						return new Token('>');
 					}
-				}
-			case '=':
-			case '!':
-				{
-					if (lookahead(this) == '=') {
-						nextChar(this);
+				case '>':
+					{
+						var nch = lookahead(this);
+						if (nch == '=') {
+							nextChar(this);
+							return new Token(">=");
+						} else if (nch == '>') {
+							nextChar(this);
+							var n2ch = lookahead(this);
+							if (n2ch == '=') {
+								nextChar(this);
+								return new Token(">>=");
+							} else if (n2ch == '>') {
+								nextChar(this);
+								if (lookahead(this) == '=') {
+									nextChar(this);
+									return new Token(">>>=");
+								} else {
+									return new Token('>>>');
+								}
+							} else {
+								return new Token('>>');
+							}
+						} else {
+							return new Token('>');
+						}
+					}
+				case '=':
+				case '!':
+					{
 						if (lookahead(this) == '=') {
 							nextChar(this);
-							return new Token(next + "==");
+							if (lookahead(this) == '=') {
+								nextChar(this);
+								return new Token(next + "==");
+							} else {
+								return new Token(next + "=");
+							}
 						} else {
-							return new Token(next + "=");
+							return new Token(next);
 						}
-					} else {
-						return new Token(next);
 					}
-				}
-			case '+':
-			case '-':
-			case '&':
-			case '|':
-				{
-					var nch = lookahead(this);
-					if (nch == '=') {
-						nextChar(this);
-						return new Token(next + "=");
-					} else if (nch == next) {
-						nextChar(this);
-						return new Token(next + next);
-					} else {
-						return new Token(next);
+				case '+':
+				case '-':
+				case '&':
+				case '|':
+					{
+						var nch = lookahead(this);
+						if (nch == '=') {
+							nextChar(this);
+							return new Token(next + "=");
+						} else if (nch == next) {
+							nextChar(this);
+							return new Token(next + next);
+						} else {
+							return new Token(next);
+						}
 					}
-				}
-			case '*':
-			case '%':
-			case '^':
-				{
-					if (lookahead(this) == '=') {
-						nextChar(this);
-						return new Token(next + '=');
-					} else {
-						return new Token(next);
+				case '*':
+				case '%':
+				case '^':
+					{
+						if (lookahead(this) == '=') {
+							nextChar(this);
+							return new Token(next + '=');
+						} else {
+							return new Token(next);
+						}
 					}
-				}
-			case '0':
-				{
-					var nch = lookahead(this);
-					pushback(this);
-					if (nch == 'x' || nch == 'X') {
-						return this.nextHexInteger();
-					} else if (nch >= '0' && nch <= '9') {
-						return this.nextOctInteger();
-					} else {
+				case '0':
+					{
+						var nch = lookahead(this);
+						pushback(this);
+						if (nch == 'x' || nch == 'X') {
+							return this.nextHexInteger();
+						} else if (nch >= '0' && nch <= '9') {
+							return this.nextOctInteger();
+						} else {
+							return this.nextDecimal();
+						}
+					}
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+					{
+						pushback(this);
 						return this.nextDecimal();
 					}
-				}
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				{
-					pushback(this);
-					return this.nextDecimal();
-				}
-			case '"':
-			case '\'':
-				{
-					pushback(this);
-					return this.nextString();
-				}
-			case '\uFFFF':
-				{
-					var token = new Token('eof');
-					token.lineBefore = true;
-					return token;
-				}
+				case '"':
+				case '\'':
+					{
+						pushback(this);
+						return this.nextString();
+					}
+				case '\uFFFF':
+					{
+						var token = new Token('eof');
+						token.lineBefore = true;
+						return token;
+					}
+			}
+			if (this.isIdentfierStart(next)) {
+				pushback(this);
+				return this.nextIdentifier();
+			}
+			if (lastError) {
+				lastError.detail.endOffset = this.ptr;
+			} else {
+				this.throwError("Unexpected source character(s)");
+				var lastError = this.context.lastError();
+			}
+			this.proceedSpaces();
+			this.startPtr = this.ptr;
 		}
-		if (this.isIdentfierStart(next)) {
-			pushback(this);
-			return this.nextIdentifier();
-		}
-		throw new SyntaxError("Unexpected source character");
 	}
 
 	Lex.prototype.nextLineComment = function() {
@@ -1626,10 +1664,10 @@ module.exports = function() {
 					{
 						this.line++;
 						this.lineBefore = true;
-						return null;
+						return;
 					}
 				case '\uFFFF':
-					return null;
+					return;
 			}
 		}
 	}
@@ -1643,7 +1681,7 @@ module.exports = function() {
 				case '*':
 					if (lookahead(this) == '/') {
 						nextChar(this);
-						return null;
+						return;
 					}
 					break;
 				case CR:
@@ -1655,7 +1693,8 @@ module.exports = function() {
 					break;
 				case '\uFFFF':
 					pushback(this);
-					throw new SyntaxError("Block comment is not enclosed");
+					this.throwError("Block comment is not enclosed");
+					return;
 			}
 		}
 	}
@@ -1664,53 +1703,50 @@ module.exports = function() {
 		var escaped = false;
 		var id = nextChar(this);
 		if (id == '\\') {
-			if (nextChar(this) != 'u') {
-				throw new SyntaxError("Expected unicode escape sequence");
-			}
-			id = this.dealUnicodeEscapeSequence();
-			if (!this.isIdentfierStart(id)) {
-				throw new SyntaxError("Illegal unicode escape sequence as identifier start");
-			}
 			escaped = true;
-		} else if (!this.isIdentfierPart(id)) {
-			throw new Error('Assertion Error');
+			if (nextChar(this) != 'u') {
+				this.throwError("Expected unicode escape sequence");
+			} else {
+				id = this.dealUnicodeEscapeSequence();
+				if (id && !this.isIdentfierStart(id)) {
+					this.throwError("Illegal unicode escape sequence as identifier start");
+				}
+			}
+		} else {
+			assert(this.isIdentfierStart(id));
 		}
 		while (true) {
 			var next = nextChar(this);
 			if (next == '\\') {
-				if (nextChar(this) != 'u') {
-					throw new SyntaxError("Expected unicode escape sequence");
-				}
-				var val = this.dealUnicodeEscapeSequence();
-				if (!this.isIdentfierPart(val)) {
-					throw new SyntaxError("Illegal unicode escape sequence as identifier part");
-				}
 				escaped = true;
-				id += val;
+				if (nextChar(this) != 'u') {
+					this.throwError("Expected unicode escape sequence");
+				} else {
+					var val = this.dealUnicodeEscapeSequence();
+					if (val && !this.isIdentfierPart(val)) {
+						this.throwError("Illegal unicode escape sequence as identifier part");
+					}
+					id += val;
+				}
 			} else if (this.isIdentfierPart(next)) {
 				id += next;
 			} else {
 				pushback(this);
-				if (!this.parseId || escaped) {
-					var token = new Token('id');
-					token.value = id;
-					return token;
+				if (this.parseId && !escaped) {
+					if (this.isStrictModeReserved(id)) {
+						var token = new Token('id');
+						token.value = id;
+						token.noStrict = 'Reserved word cannot be used as identifiers';
+						return token;
+					} else if (this.isReserved(id)) {
+						this.throwError("Reserved word cannot be used as identifiers");
+					} else if (this.isKeyword(id)) {
+						return new Token(id);
+					}
 				}
-
-				if (this.isStrictModeReserved(id)) {
-					var token = new Token('id');
-					token.value = id;
-					token.noStrict = 'Reserved word cannot be used as identifiers';
-					return token;
-				} else if (this.isReserved(id)) {
-					throw new SyntaxError("Reserved word cannot be used as identifiers");
-				} else if (this.isKeyword(id)) {
-					return new Token(id);
-				} else {
-					var token = new Token('id');
-					token.value = id;
-					return token;
-				}
+				var token = new Token('id');
+				token.value = id;
+				return token;
 			}
 		}
 	}
@@ -1718,14 +1754,20 @@ module.exports = function() {
 	Lex.prototype.nextOctInteger = function() {
 		assertNext(this, '0');
 		var raw = "";
+		var error = false;
 		while (true) {
 			var next = nextChar(this);
 			if (next >= '0' && next <= '7') {
 				raw += next;
+			} else if (next == '8' || next == '9') {
+				error = true;
 			} else {
 				pushback(this);
-				if (next == '8' || next == '9' || next == '\\' || this.isIdentfierStart(next)) {
-					throw new SyntaxError("Unexpected character after number literal");
+				if (next == '\\' || this.isIdentfierStart(next)) {
+					this.nextIdentifier();
+					this.throwError("Unexpected character after number literal");
+				} else if (error) {
+					this.throwError("Unexpected digits in octal number literal");
 				}
 				var token = new Token('num');
 				token.value = parseInt(raw, 8);
@@ -1746,7 +1788,8 @@ module.exports = function() {
 			} else {
 				pushback(this);
 				if (next == '\\' || this.isIdentfierStart(next)) {
-					throw new SyntaxError("Unexpected character after number literal");
+					this.nextIdentifier();
+					this.throwError("Unexpected character after number literal");
 				}
 				var token = new Token('num');
 				token.value = parseInt(rawNumber, 16);
@@ -1789,7 +1832,7 @@ module.exports = function() {
 			}
 			pushback(that);
 			if (!expPart.length) {
-				throw new SyntaxError("Expected +, - or digits after the exponential mark");
+				that.throwError("Expected +, - or digits after the exponential mark");
 			}
 			return "e" + sign + expPart;
 		}
@@ -1819,7 +1862,8 @@ module.exports = function() {
 		}
 		next = lookahead(this);
 		if (next == '\\' || this.isIdentfierStart(next)) {
-			throw new SyntaxError("Unexpected character after number literal");
+			this.nextIdentifier();
+			this.throwError("Unexpected character after number literal");
 		}
 		var token = new Token('num');
 		token.value = parseFloat(raw);
@@ -1921,7 +1965,8 @@ module.exports = function() {
 								} else if (d >= 'a' && d <= 'f') {
 									val += subChar(d, 'a') + 10;
 								} else {
-									throw new SyntaxError("Expected hex digits in hexical escape sequence");
+									this.throwError("Expected hex digits in hexical escape sequence");
+									break;
 								}
 							}
 							value += char(val);
@@ -1940,7 +1985,10 @@ module.exports = function() {
 				case PS:
 				case '\uFFFF':
 					pushback(this);
-					throw new SyntaxError("String literal is not enclosed");
+					this.throwError("String literal is not enclosed");
+					var token = new Token('str');
+					token.value = value;
+					return token;
 				default:
 					value += next;
 					break;
@@ -1970,7 +2018,8 @@ module.exports = function() {
 						case PS:
 						case '\uFFFF':
 							pushback(this);
-							throw new SyntaxError("Regexp literal is not enclosed");
+							this.throwError("Regexp literal is not enclosed");
+							break loop;
 					}
 					regexp += '\\' + nxt;
 					break;
@@ -1988,7 +2037,8 @@ module.exports = function() {
 				case PS:
 				case '\uFFFF':
 					pushback(this);
-					throw new SyntaxError("Regexp literal is not enclosed");
+					this.throwError("Regexp literal is not enclosed");
+					break loop;
 				default:
 					regexp += nxt;
 					break;
@@ -1999,11 +2049,12 @@ module.exports = function() {
 			var next = nextChar(this);
 			if (next == '\\') {
 				if (nextChar(this) != 'u') {
-					throw new SyntaxError("Expected unicode escape sequence");
+					this.throwError("Expected unicode escape sequence");
+					continue;
 				}
 				next = this.dealUnicodeEscapeSequence();
 				if (!this.isIdentfierPart(next)) {
-					throw new SyntaxError("Illegal identifier part in regexp flags");
+					this.throwError("Illegal identifier part in regexp flags");
 				}
 				flags += next;
 			} else if (this.isIdentfierPart(next)) {
@@ -2020,22 +2071,14 @@ module.exports = function() {
 
 	Lex.prototype.nextToken = function() {
 		this.proceedSpaces();
-		var startPtr = this.ptr;
+		this.startPtr = this.ptr;
 		var startLine = this.line;
-		try {
-			var ret = this.nextRawToken();
-		} catch (e) {
-			e.detail = {
-				startOffset: startPtr,
-				endOffset: this.ptr + 1
-			};
-			throw e;
-		}
+		var ret = this.nextRawToken();
 		if (this.lineBefore) {
 			ret.lineBefore = this.lineBefore;
 			this.lineBefore = false;
 		}
-		ret.startPtr = startPtr;
+		ret.startPtr = this.startPtr;
 		ret.startLine = startLine;
 		ret.endPtr = this.ptr;
 		ret.endLine = this.line;
@@ -2044,22 +2087,14 @@ module.exports = function() {
 
 	Lex.prototype.nextRegexp = function(tk) {
 		pushback(this, tk.type.length);
-		var startPtr = this.ptr;
+		this.startPtr = this.ptr;
 		var startLine = this.line;
-		try {
-			var ret = this.nextRawRegexp();
-		} catch (e) {
-			e.detail = {
-				startOffset: startPtr,
-				endOffset: this.ptr + 1
-			};
-			throw e;
-		}
+		var ret = this.nextRawRegexp();
 		if (this.lineBefore) {
 			ret.lineBefore = this.lineBefore;
 			this.lineBefore = false;
 		}
-		ret.startPtr = startPtr;
+		ret.startPtr = this.startPtr;
 		ret.startLine = startLine;
 		ret.endPtr = this.ptr;
 		ret.endLine = this.line;
@@ -2072,7 +2107,7 @@ module.exports = function() {
 
 	return Lex;
 }();
-},{"./chartype.js":1}],6:[function(require,module,exports){
+},{"./chartype":1}],6:[function(require,module,exports){
 var NorlitJSCompiler = require("../compiler");
 
 function minifyNumber(num) {
@@ -2682,7 +2717,7 @@ function minify(ast) {
             case 'ExpressionStatement':
                 {
                     var str = minify(ast.expression).str;
-                    if (typeof(ast.expression) == "string" || str.indexOf("function") != -1) {
+                    if (typeof(ast.expression) == "string" || str.indexOf("function ") == 0 || str.indexOf("function(") == 0) {
                         return {
                             str: "(" + str + ");"
                         };
@@ -2857,12 +2892,6 @@ exports.traverse = function(ast, options) {
 	traverse(ast, options);
 }
 },{}],8:[function(require,module,exports){
-var NorlitJSCompiler = require("./compiler.js");
-NorlitJSCompiler.minify=function(c){
-	var ast = NorlitJSCompiler.Parser(c);
-	ast = NorlitJSCompiler.ASTPass.apply(ast);
-	return require("./module/minify").minify(ast).str;
-}
-window.NorlitJSCompiler=NorlitJSCompiler;
-
+window.NorlitJSCompiler = require("./compiler.js");
+window.NorlitJSCompiler.minify = require("./module/minify").minify;
 },{"./compiler.js":2,"./module/minify":6}]},{},[8]);
