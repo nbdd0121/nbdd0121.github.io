@@ -14,7 +14,7 @@
 			}
 			return {
 				node: this,
-				offset: Math.min(divTextLength(this), offset)
+				offset: Math.min(this.text().length, offset)
 			};
 		} else {
 			for (var i = 0; i < contents.length; i++) {
@@ -31,7 +31,7 @@
 			var n = $(contents[contents.length - 1]);
 			return {
 				node: n,
-				offset: divTextLength(n)
+				offset: n.text().length
 			};
 		}
 	}
@@ -145,11 +145,9 @@
 				case 8:
 					{
 						if (!isCollapsed()) {
-							console.log('re');
 							this.removeSelected();
 						}
 						var start = getSelectionStart();
-						console.log(start);
 						if (start.offset == 0) {
 							var prev = start.node.prev();
 							if (prev.length) {
@@ -202,8 +200,38 @@
 						}
 						break;
 					}
+				case 37: //LEFT
+					{
+						var index = this.panel.selection();
+						setRangeCollapsed(this.panel, index - 1);
+						event.preventDefault();
+						break;
+					}
+				case 38: //UP
+					{
+						var start = getSelectionStart();
+						var prev = start.node.prev();
+						setRangeCollapsed(prev.length ? prev : start.node, start.offset);
+						event.preventDefault();
+						break;
+					}
+				case 39: //RIGHT
+					{
+						var index = this.panel.selection();
+						setRangeCollapsed(this.panel, index + 1);
+						event.preventDefault();
+						break;
+					}
+				case 40: //DOWN
+					{
+						var start = getSelectionStart();
+						var next = start.node.next();
+						setRangeCollapsed(next.length ? next : start.node, start.offset);
+						event.preventDefault();
+						break;
+					}
 					//default:
-					//	console.log("Unknown Key " + event.which);
+					//	console.log("Unknown Key ", event);
 			}
 		}.bind(this));
 

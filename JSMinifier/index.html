@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="../jquery/jquery.js"></script>
-<script src="../jquery/jquery-mousewheel.js"></script>
+<link rel="stylesheet" type="text/css" href="../libs/orion/built-editor.css"/>
 <script src="NorlitJSCompiler.js"></script>
-<script src="codeeditor.js"></script>
+<script src="../jquery/jquery.js"></script>
+<script src="../libs/orion/built-editor.js"></script>
+<script src="../jquery/jquery-orion.js"></script>
+<script>
+	$(function(){
+		$("#text").orion();
+	});
+</script>
 <script>
 	function minify(){
 		try{
-			var str=NorlitJSCompiler.minify($('#text').codeEditor('text'));
-			$('#text').codeEditor('text', str);
+			var str=NorlitJSCompiler.minify($('#text').orion('text'));
+			$('#text').orion('text', str);
 			$('.x-statusbar').text("Minified without error(s)");
 		}catch(e){
 			if(e instanceof SyntaxError){
@@ -22,8 +28,10 @@
 		}
 	}
 </script>
-<link rel="stylesheet" href="codeeditor.css"/>
 <style>
+	*{
+		box-sizing:border-box;
+	}
 	html, body{
 		height: 100%;
 		margin: 0;
@@ -90,9 +98,11 @@
 	}
 
 	#text{
+		margin: 0px;
+		padding: 0px;
 		width: 100%;
 		height:100%;
-		padding-top: 5px;
+		font-size:14px;
 	}
 </style>
 </head>
@@ -104,8 +114,8 @@
 	<span class="tabbutton" onclick="minify()">MINIFY</span>
 </div>
 <div class="x-main">
-  <div class="x-codeeditor" id="text">
-  </div>
+<pre id="text" class="editor" data-editor-lang="js">
+</pre>
 </div>
 <div class="x-statusbar">
 	Ready
