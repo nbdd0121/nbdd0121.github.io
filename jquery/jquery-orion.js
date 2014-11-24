@@ -6,11 +6,17 @@
 			if (this[i].orion) {
 				editors[i] = this[i].orion;
 			} else {
-				editors[i] = this[i].orion = edit({
+				var orion = edit({
 					parent: this[i],
+					lang: "js",
 					wrappable: true,
 					wrapMode: true
 				});
+				editors[i] = this[i].orion = orion;
+
+				orion.getContentAssist().setProviders([
+					require('norlit/editor').contentAssist
+				]);
 			}
 		}
 		if (method !== undefined) {
