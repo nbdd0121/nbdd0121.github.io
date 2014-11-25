@@ -2,15 +2,34 @@
 <html>
 <head>
 <link rel="stylesheet" type="text/css" href="../libs/orion/built-editor.css"/>
+<link rel="stylesheet" type="text/css" href="../libs/ribbon/ribbon.css"/>
 <script src="NorlitJSCompiler.js"></script>
 <script src="../jquery/jquery.js"></script>
 <script src="../libs/orion/built-editor.js"></script>
 <script src="../libs/orion/custom-editor.js"></script>
 <script src="../jquery/jquery-orion.js"></script>
+<script src="../libs/ribbon/ribbon.js"></script>
 <script>
 	$(function(){
-		$("#text").orion();
+		var autoValidate=true;
+
+		$("#text").orion('change', function(){
+			if(autoValidate){
+				validate();
+			}
+		});
 		editor=$("#text")[0].orion;
+
+		$("#validateOnType").click(function(){
+			var obj=$("#validateOnType");
+			if(obj.attr('active')!==undefined){
+				obj.removeAttr('active');
+				autoValidate=false;
+			}else{
+				obj.attr('active', '');
+				autoValidate=true;
+			}
+		});
 	});
 	var editor;
 </script>
@@ -160,9 +179,15 @@
 	<span class="title">Norlit JS Compiler Tools<span style="font-size:15px;"> Beta</span></span>
 </div>
 <div class="x-menubar">
+	<span class="tabbutton" xTarget='view'>Options</span>
 	<span class="tabbutton" onclick="validate()">Validate</span>
 	<span class="tabbutton" onclick="minify()">Minify</span>
 </div>
+	<div class="x-menu-tab" tabName="view">
+		<div xRole="group" label="Validation">
+			<div xRole="button" xIcon="" xText="Validate<br/>On Type" id="validateOnType" active></div>
+		</div>
+	</div>
 <div class="x-main">
 <pre id="text" class="editor">
 </pre>

@@ -1,6 +1,6 @@
 (function($) {
 	var edit = require("orion/editor/edit");
-	$.fn.orion = function(method) {
+	$.fn.orion = function(method, arg0) {
 		var editors = Array(this.length);
 		for (var i = 0; i < this.length; i++) {
 			if (this[i].orion) {
@@ -23,23 +23,31 @@
 			switch (method) {
 				case 'text':
 					{
-						if (arguments.length == 1) {
+						if (arg0 === undefined) {
 							var ret = "";
 							for (var i = 0; i < editors.length; i++) {
 								ret += editors[i].getText();
 							}
 							return ret;
 						} else {
-							var txt = arguments[1];
 							for (var i = 0; i < editors.length; i++) {
-								editors[i].setText(txt);
+								editors[i].setText(arg0);
 							}
 							return this;
 						}
 					}
+				case 'change':
+					{
+						for (var i = 0; i < editors.length; i++) {
+							editors[i].getTextView().addEventListener("ModelChanged", arg0);
+						}
+						break;
+					}
 				default:
 					throw 'error';
 			}
+		} else {
+			return this;
 		}
 	}
 })(jQuery);
