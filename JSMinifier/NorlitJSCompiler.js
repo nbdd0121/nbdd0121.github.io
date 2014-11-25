@@ -56,7 +56,6 @@ function Context(tolerance) {
 
 Context.prototype.throwError = function(error) {
 	if (this.tolerance) {
-		console.log('Error Tolerance', error.stack);
 		this.errors.push(error);
 	} else {
 		throw error;

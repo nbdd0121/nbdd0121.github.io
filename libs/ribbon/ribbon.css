@@ -30,6 +30,7 @@
 	height:68px;
 	color:#444444;
 	padding: 3px;
+	text-align: center;
 }
 .x-menu-tab [xRole=button][active]{
 	background: rgb(194, 213, 242);
@@ -53,5 +54,5 @@
 	color: #666666;
 	font-size:11px;
 	line-height: 15px;
-	padding-top: 2px;
+	padding-top: 4px;
 }

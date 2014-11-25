@@ -10,26 +10,23 @@
 <script src="../jquery/jquery-orion.js"></script>
 <script src="../libs/ribbon/ribbon.js"></script>
 <script>
+	var Options={
+		errorTolerance: true,
+		validateOnType: true
+	};
 	$(function(){
-		var autoValidate=true;
-
+		$("#errorTolerance").change(function(){
+			Options.errorTolerance=$("#errorTolerance").ribbon('value');
+		});
+		$("#validateOnType").change(function(){
+			Options.validateOnType=$("#validateOnType").ribbon('value');
+		});
 		$("#text").orion('change', function(){
-			if(autoValidate){
+			if(Options.validateOnType){
 				validate();
 			}
 		});
 		editor=$("#text")[0].orion;
-
-		$("#validateOnType").click(function(){
-			var obj=$("#validateOnType");
-			if(obj.attr('active')!==undefined){
-				obj.removeAttr('active');
-				autoValidate=false;
-			}else{
-				obj.attr('active', '');
-				autoValidate=true;
-			}
-		});
 	});
 	var editor;
 </script>
@@ -37,12 +34,12 @@
 	function validate(){
 		editor.removeAllAnnotationMarks();
 
-		var context = new NorlitJSCompiler.Context(true);
+		var context = new NorlitJSCompiler.Context(Options.errorTolerance);
 		try{
 			var ast = NorlitJSCompiler.Parser($("#text").orion('text'), context);
 		}catch(e){
 			if(e instanceof SyntaxError){
-				context.throwError(e);
+				context.errors.push(e);
 			}else{
 				$('.x-statusbar').text('Please report to the author: '+e);
 				console.log(e.stack);
@@ -53,7 +50,6 @@
 			$('.x-statusbar').text("No syntactical errors are found");
 		}else{
 			context.errors.forEach(function(msg){
-				console.log(msg.detail);
 				editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
 			});
 			$('.x-statusbar').text(context.errors.length==1?'1 error is found':context.errors.length+' errors are found');
@@ -62,12 +58,12 @@
 	function minify(){
 		editor.removeAllAnnotationMarks();
 
-		var context = new NorlitJSCompiler.Context(true);
+		var context = new NorlitJSCompiler.Context(Options.errorTolerance);
 		try{
 			var ast = NorlitJSCompiler.Parser($("#text").orion('text'), context);
 		}catch(e){
 			if(e instanceof SyntaxError){
-				context.throwError(e);
+				context.errors.push(e);
 			}else{
 				$('.x-statusbar').text('Please report to the author: '+e);
 				console.log(e.stack);
@@ -183,11 +179,12 @@
 	<span class="tabbutton" onclick="validate()">Validate</span>
 	<span class="tabbutton" onclick="minify()">Minify</span>
 </div>
-	<div class="x-menu-tab" tabName="view">
-		<div xRole="group" label="Validation">
-			<div xRole="button" xIcon="" xText="Validate<br/>On Type" id="validateOnType" active></div>
-		</div>
+<div class="x-menu-tab" tabName="view">
+	<div xRole="group" label="Validation">
+		<div xRole="button" xBehavior="toggle" xIcon="img/validateOnType.png" xText="Validate<br/>On Type" id="validateOnType" active></div>
+		<div xRole="button" xBehavior="toggle" xIcon="img/errorTolerance.png" xText="Error<br/>Tolerance" id="errorTolerance" active></div>
 	</div>
+</div>
 <div class="x-main">
 <pre id="text" class="editor">
 </pre>

@@ -11,9 +11,7 @@
 
 	function popupMenuHandler(event) {
 		var target = $(event.target);
-		if (target.is(".x-menu-dropdown") || target.parents(".x-menu-dropdown").length) {
-
-		} else {
+		if (!target.is(".x-menu-dropdown") && !target.parents(".x-menu-dropdown").length) {
 			Ribbon.hideTab();
 		}
 	}
@@ -26,14 +24,16 @@
 		this.current = name;
 		$('.x-menu-tab').hide();
 		$(tab).show();
-		this.dropDown.show();
+		if (this.dropDown.is(':hidden')) {
+			this.dropDown.fadeIn(300);
+		}
 		$.invokeLater(function() {
 			$(document.body).click(popupMenuHandler);
 		});
 	}
 	Ribbon.hideTab = function() {
 		this.current = null;
-		this.dropDown.hide();
+		this.dropDown.fadeOut(300);
 		$(document.body).unbind('click', popupMenuHandler);
 	}
 	$(function() {
@@ -70,6 +70,48 @@
 				}
 			}(target));
 		}
+
+		var toggleButtons = $("[xBehavior=toggle]");
+		for (var i = 0; i < toggleButtons.length; i++) {
+			var item = $(toggleButtons[i]);
+			item.click(function(event) {
+				var target = $(event.currentTarget);
+				target.ribbon('toggle');
+				target.change();
+			})
+		}
 	});
+
+	$.fn.ribbon = function(method, arg) {
+		if (this.length != 1) {
+			throw '';
+		}
+		var role = this.attr('xRole');
+		switch (role) {
+			case 'button':
+				switch (method) {
+					case 'toggle':
+						{
+							var newVal = !this.ribbon('value');
+							this.ribbon('value', newVal);
+							return newVal;
+						}
+					case 'value':
+						if (arg === undefined) {
+							return this.attr('active') !== undefined;
+						} else {
+							if (arg) {
+								this.attr('active', '');
+							} else {
+								this.removeAttr('active');
+							}
+							return this;
+						}
+				}
+				throw '';
+		}
+		throw '';
+	}
+
 	window.Ribbon = Ribbon;
 })(jQuery);
