@@ -12,8 +12,19 @@
 <script>
 	var Options={
 		errorTolerance: true,
-		validateOnType: true
+		validateOnType: true,
+		defaultFileName: "SavedJavascript.js"
 	};
+	$.fileDialog=function(onsuccess){
+		var file=$('<input type="file">');
+		file.change(function(){
+			if(file[0].files.length!=1){
+				return;
+			}
+			onsuccess(file[0].files[0]);
+		});
+		file.click();
+	}
 	$(function(){
 		$("#errorTolerance").change(function(){
 			Options.errorTolerance=$("#errorTolerance").ribbon('value');
@@ -29,8 +40,16 @@
 		editor=$("#text")[0].orion;
 	});
 	var editor;
-</script>
-<script>
+
+	function displayInfo(context){
+		context.errors.forEach(function(msg){
+			editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
+		});
+		context.warnings.forEach(function(msg){
+			editor.addAnnotationMark('warning', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
+		});
+	}
+
 	function validate(){
 		editor.removeAllAnnotationMarks();
 
@@ -46,12 +65,10 @@
 				throw e;
 			}
 		}
+		displayInfo(context);
 		if(!context.hasError()){
 			$('.x-statusbar').text("No syntactical errors are found");
 		}else{
-			context.errors.forEach(function(msg){
-				editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
-			});
 			$('.x-statusbar').text(context.errors.length==1?'1 error is found':context.errors.length+' errors are found');
 		}
 	}
@@ -76,15 +93,32 @@
 			$('#text').orion('text', str);
 			$('.x-statusbar').text("Minified without errors");
 		}else{
-			context.errors.forEach(function(msg){
-				editor.addAnnotationMark('error', msg.toString(), msg.detail.startOffset, msg.detail.endOffset);
-			});
+			displayInfo(context);
 			$('.x-statusbar').text(
 				(context.errors.length==1?'1 error is':context.errors.length+' errors are')+
 				' found, minification failed'
 			);
 		}
 	}
+
+	function openFile(){
+		$.fileDialog(function(file){
+			var reader=new FileReader();
+			reader.onload=function(event){
+				$("#text").orion('text', event.target.result);
+			}
+			reader.readAsText(file);
+			Options.defaultFileName=file.name
+		});
+	}
+
+	function saveFile(){
+		$('<a>')
+			.attr('href', 'data:application/octetstream;base64,'+btoa($("#text").orion('text')))
+			.attr('download', Options.defaultFileName)
+			[0].click();
+	}
+
 </script>
 <style>
 	*{
@@ -178,6 +212,8 @@
 	<span class="tabbutton" xTarget='view'>Options</span>
 	<span class="tabbutton" onclick="validate()">Validate</span>
 	<span class="tabbutton" onclick="minify()">Minify</span>
+	<span class="tabbutton" onclick="openFile()">Open</span>
+	<span class="tabbutton" onclick="saveFile()">Save</span>
 </div>
 <div class="x-menu-tab" tabName="view">
 	<div xRole="group" label="Validation">

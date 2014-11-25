@@ -49,8 +49,16 @@ module.exports = function() {
 var NorlitJSCompiler = {};
 module.exports = NorlitJSCompiler;
 
+NorlitJSCompiler.Warning = function(message) {
+	this.stack = (new Error).error;
+	this.message = message;
+}
+NorlitJSCompiler.Warning.prototype = new Error();
+NorlitJSCompiler.Warning.prototype.name = "Warning"
+
 function Context(tolerance) {
 	this.errors = [];
+	this.warnings = [];
 	this.tolerance = !!tolerance;
 }
 
@@ -60,6 +68,10 @@ Context.prototype.throwError = function(error) {
 	} else {
 		throw error;
 	}
+}
+
+Context.prototype.throwWarning = function(w) {
+	this.warnings.push(w);
 }
 
 Context.prototype.lastError = function() {
@@ -208,6 +220,9 @@ require("./compiler").ASTPass.register({
 });
 },{"./compiler":2}],4:[function(require,module,exports){
 'use strict';
+
+var NorlitJSCompiler = require("./compiler");
+
 module.exports = function() {
 	function Grammar(lex, context) {
 		this.lex = lex;
@@ -224,15 +239,46 @@ module.exports = function() {
 		this[this.length++] = obj;
 	}
 
+	Grammar.prototype.throwErrorOnToken = function(token, error) {
+		if (!token) {
+			token = this.lookahead();
+		}
+		var error = new SyntaxError(error);
+		error.detail = {
+			startOffset: token.startPtr,
+			endOffset: token.endPtr
+		};
+		this.context.throwError(error);
+	}
+
+	Grammar.prototype.throwWarningOnToken = function(token, error) {
+		if (!token) {
+			token = this.lookahead();
+		}
+		var error = new NorlitJSCompiler.Warning(error);
+		error.detail = {
+			startOffset: token.startPtr,
+			endOffset: token.endPtr
+		};
+		this.context.throwWarning(error);
+	}
+
+	Grammar.prototype._throwStrictOnToken = function(token, error) {
+		if (this.strictMode) {
+			this.throwErrorOnToken(token, error + " is not allowed in strict mode");
+		} else {
+			this.throwWarningOnToken(token, error + " is discouraged and will not work if in strict mode");
+		}
+	}
+
 	Grammar.prototype.next = function() {
 		if (this.buffer.length) {
 			var ret = this.buffer.shift();
 		} else {
 			var ret = this.lex.nextToken();
 		}
-		if (this.strictMode && ret.noStrict) {
-			this.buffer.unshift(ret);
-			throw new SyntaxError(ret.noStrict);
+		if (ret.noStrict) {
+			this._throwStrictOnToken(ret, ret.noStrict);
 		}
 		return ret;
 	}
@@ -410,35 +456,32 @@ module.exports = function() {
 					case 'Property':
 						{
 							if (ele.type == 'Property') {
-								if (this.strictMode) {
-									console.log(prop);
-									throw new SyntaxError('Two data properties with the same name in object initializer expression is not allowed in strict mode');
-								}
-								break outer;
+								this._throwStrictOnToken(null, 'Defining duplicated data properties in object initializer expression');
+							} else {
+								this.throwErrorOnToken(null, 'Data property and accessor property with the same name cannot be defined at the same time');
 							}
-							throw new SyntaxError('Data property and accessor property with the same name cannot be defined at the same time');
+							break;
 						}
 					case 'Setter':
 						{
 							if (ele.type == 'Property') {
-								throw new SyntaxError('Data property and accessor property with the same name cannot be defined at the same time');
+								this.throwErrorOnToken(null, 'Data property and accessor property with the same name cannot be defined at the same time');
 							} else if (ele.type == 'Setter') {
-								throw new SyntaxError('Two setters with the same name cannot be defined at the same time');
-							} else {
-								break;
+								this.throwErrorOnToken(null, 'Two setters with the same name cannot be defined at the same time');
 							}
+							break;
 						}
 					default:
 						{
 							if (ele.type == 'Property') {
-								throw new SyntaxError('Data property and accessor property with the same name cannot be defined at the same time');
+								this.throwErrorOnToken(null, 'Data property and accessor property with the same name cannot be defined at the same time');
 							} else if (ele.type == 'Getter') {
-								throw new SyntaxError('Two getters with the same name cannot be defined at the same time');
-							} else {
-								break;
+								this.throwErrorOnToken(null, 'Two getters with the same name cannot be defined at the same time');
 							}
+							break;
 						}
 				}
+				break;
 			}
 			ret.elements.push(prop);
 		}
@@ -480,8 +523,8 @@ module.exports = function() {
 				ret.key = colon.value;
 				this.expect('(', 'Expected left parenthesis in object setter initializer');
 				ret.parameter = this.expect('id', 'Object setter initializer need to have exactly one parameter').value;
-				if (this.strictMode && (ret.parameter == 'eval' || ret.parameter == 'arguments')) {
-					throw new SyntaxError("Eval or arguments cannot be used as parameter name in strict mode");
+				if (ret.parameter == 'eval' || ret.parameter == 'arguments') {
+					this._throwStrictOnToken(null, "Overriding eval or arguments");
 				}
 				this.expect(')', 'Object setter initializer need to have exactly one parameter');
 				this.expect('{', "Expected left brace in object setter declaration");
@@ -614,8 +657,8 @@ module.exports = function() {
 		if (nxt.lineBefore || (nxt.type != '++' && nxt.type != '--')) {
 			return expr;
 		}
-		if (this.strictMode && expr.type == 'Identifier' && (expr.name == 'eval' || expr.name == 'arguments')) {
-			throw new SyntaxError("Eval and arguments cannot be used as operand of incremental/decremental expression in strict mode");
+		if (expr.type == 'Identifier' && (expr.name == 'eval' || expr.name == 'arguments')) {
+			this._throwStrictOnToken(null, "Overriding eval or arguments");
 		}
 		this.next();
 		var ret = new Node('PostfixExpression');
@@ -642,13 +685,10 @@ module.exports = function() {
 		var node = new Node('UnaryExpression');
 		node.operator = this.next().type;
 		node.operand = this.unaryExpr();
-		if (this.strictMode) {
-			if (node.operator == 'delete' && node.operand.type == 'Identifier') {
-				throw new SyntaxError('Deleting a variable, function name or function argument is not allowed in strict mode');
-			}
-			if ((node.operator == '++' || node.operator == '--') && node.operand.type == 'Identifier' && (node.operand.name == 'eval' || node.operand.name == 'arguments')) {
-				throw new SyntaxError("Eval and arguments cannot be used as operand of incremental/decremental expression in strict mode");
-			}
+		if (node.operator == 'delete' && node.operand.type == 'Identifier') {
+			this._throwStrictOnToken(null, 'Deleting a unqualified identifier');
+		} else if ((node.operator == '++' || node.operator == '--') && node.operand.type == 'Identifier' && (node.operand.name == 'eval' || node.operand.name == 'arguments')) {
+			this._throwStrictOnToken(null, "Overriding eval or arguments");
 		}
 		return node;
 	}
@@ -738,8 +778,8 @@ module.exports = function() {
 			default:
 				return node;
 		}
-		if (this.strictMode && node.type == 'Identifier' && (node.name == 'eval' || node.name == 'arguments')) {
-			throw new SyntaxError('Eval or arguments cannot be used as left hand side of assignment expression');
+		if (node.type == 'Identifier' && (node.name == 'eval' || node.name == 'arguments')) {
+			this.throwErrorOnToken(null, "Overriding eval or arguments");
 		}
 		var ret = new Node('AssignmentExpression');
 		ret.operator = this.next().type;
@@ -778,9 +818,7 @@ module.exports = function() {
 			case 'return':
 				return this.returnStmt();
 			case 'with':
-				if (this.strictMode) {
-					throw new SyntaxError('With statement cannot be used in strict mode');
-				}
+				this._throwStrictOnToken(null, 'With statement');
 				return this.withStmt();
 			case 'switch':
 				return this.switchStmt();
@@ -837,8 +875,8 @@ module.exports = function() {
 		do {
 			var ret = new Node('VariableDeclarator');
 			ret.name = this.expect('id', 'Expected identifier in variable declaration').value;
-			if (this.strictMode && (ret.name == 'eval' || ret.name == 'arguments')) {
-				throw new SyntaxError('Eval or arguments cannot be declared as variable in strict mode');
+			if (ret.name == 'eval' || ret.name == 'arguments') {
+				this._throwStrictOnToken(null, "Overriding eval or arguments");
 			}
 			if (this.lookahead().type == '=') {
 				this.next();
@@ -1087,8 +1125,8 @@ module.exports = function() {
 		this.expect('catch', "Expected catch or finally after try block");
 		this.expect('(', "Expected left parenthesis in catch block");
 		ret.parameter = this.expect('id', "Expected identifier in catch block").value;
-		if (this.strictMode && (ret.parameter == 'eval' || ret.parameter == 'arguments')) {
-			throw new SyntaxError('Eval or arguments cannot be used as catch variable');
+		if (ret.parameter == 'eval' || ret.parameter == 'arguments') {
+			this._throwStrictOnToken(null, "Overriding eval or arguments");
 		}
 		this.expect(')', "Parenthesis mismatch in catch block");
 		ret.catch = this.block();
@@ -1115,8 +1153,8 @@ module.exports = function() {
 		var func = new Node('FunctionExpression');
 		if (this.lookahead().type == 'id') {
 			func.name = this.next().value;
-			if (this.strictMode && (func.name == 'eval' || func.name == 'arguments')) {
-				throw new SyntaxError('Eval or arguments cannot be used as function name in strict mode');
+			if (func.name == 'eval' || func.name == 'arguments') {
+				this._throwStrictOnToken(null, "Overriding eval or arguments");
 			}
 		} else {
 			func.name = undefined;
@@ -1138,12 +1176,10 @@ module.exports = function() {
 		var ret = [];
 		do {
 			var name = this.expect('id', "Expected identifier in function parameter list").value;
-			if (this.strictMode) {
-				if (name == 'eval' || name == 'arguments') {
-					throw new SyntaxError("Eval or arguments cannot be used as parameter name in strict mode");
-				} else if (ret.indexOf(name) != -1) {
-					throw new SyntaxError('Two parameters cannot have same name in strict mode');
-				}
+			if (name == 'eval' || name == 'arguments') {
+				this._throwStrictOnToken(null, "Overriding eval or arguments");
+			} else if (ret.indexOf(name) != -1) {
+				this._throwStrictOnToken(null, 'Using duplicate parameter names');
 			}
 			ret.push(name);
 			if (this.lookahead().type != ',') {
@@ -1223,7 +1259,7 @@ module.exports = function() {
 		return ret;
 	}
 }();
-},{"./lex":5}],5:[function(require,module,exports){
+},{"./compiler":2,"./lex":5}],5:[function(require,module,exports){
 'use strict';
 
 module.exports = function() {
@@ -1735,7 +1771,7 @@ module.exports = function() {
 					if (this.isStrictModeReserved(id)) {
 						var token = new Token('id');
 						token.value = id;
-						token.noStrict = 'Reserved word cannot be used as identifiers';
+						token.noStrict = 'Reserved word as identifiers';
 						return token;
 					} else if (this.isReserved(id)) {
 						this.throwError("Reserved word cannot be used as identifiers");
@@ -1770,7 +1806,7 @@ module.exports = function() {
 				}
 				var token = new Token('num');
 				token.value = parseInt(raw, 8);
-				token.noStrict = "Octal literals are not allowed in strict mode";
+				token.noStrict = "Octal literal";
 				return token;
 			}
 		}
@@ -1936,7 +1972,7 @@ module.exports = function() {
 						case '7':
 							{
 								//if (this.strictMode) {
-								throw new SyntaxError("Octal escape sequence are not allowed in strict mode");
+								throw new SyntaxError("Octal escape sequence");
 								//}
 								/*var ll1 = lookahead(this);
 								if (ll1 < '0' || ll1 > '7') {
