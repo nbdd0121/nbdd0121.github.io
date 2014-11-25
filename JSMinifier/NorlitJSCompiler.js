@@ -1771,7 +1771,7 @@ module.exports = function() {
 					if (this.isStrictModeReserved(id)) {
 						var token = new Token('id');
 						token.value = id;
-						token.noStrict = 'Reserved word as identifiers';
+						token.noStrict = 'Future reserved word as identifiers';
 						return token;
 					} else if (this.isReserved(id)) {
 						this.throwError("Reserved word cannot be used as identifiers");
@@ -1908,6 +1908,7 @@ module.exports = function() {
 	Lex.prototype.nextString = function() {
 		var quote = assertNext(this, '\'"');
 		var value = "";
+		var oct = false;
 		while (true) {
 			var next = nextChar(this);
 			switch (next) {
@@ -1971,20 +1972,21 @@ module.exports = function() {
 						case '6':
 						case '7':
 							{
-								//if (this.strictMode) {
-								throw new SyntaxError("Octal escape sequence");
-								//}
-								/*var ll1 = lookahead(this);
+								oct = true;
+								var ll1 = lookahead(this);
 								if (ll1 < '0' || ll1 > '7') {
-									this.buffer += char(subChar(next, '0'));
-									return;
+									value += char(subChar(next, '0'));
+									break;
 								}
 								nextChar(this);
 								var ll2 = lookahead(this);
-								if (ll2 < '0' || ll2 > '9') {
-									appendToBuffer(, next - '0');
-									return;
-								}*/
+								if (ll2 < '0' || ll2 > '7' || (next >= '4' && next <= '7')) {
+									value += char(subChar(next, '0') * 8 + subChar(ll1, '0'));
+								} else {
+									nextChar(this);
+									value += char(subChar(next, '0') * 64 + subChar(ll1, '0') * 8 + subChar(ll2, '0'));
+								}
+								break;
 							}
 
 						case 'x':
@@ -2023,6 +2025,9 @@ module.exports = function() {
 					this.throwError("String literal is not enclosed");
 					var token = new Token('str');
 					token.value = value;
+					if (oct == true) {
+						token.noStrict = 'Octal escape sequence';
+					}
 					return token;
 				default:
 					value += next;
