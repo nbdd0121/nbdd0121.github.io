@@ -56,3 +56,13 @@
 	line-height: 15px;
 	padding-top: 4px;
 }
+.x-menu-tab select, .x-menu-tab input[list]{
+	vertical-align: top;
+	border: solid grey 1px;
+	background: white;
+	outline: none;
+	color: #444444;
+	height: 22px;
+	font-size: 12px;
+	margin: 6px;
+}

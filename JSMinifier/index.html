@@ -5,11 +5,13 @@
 <link rel="stylesheet" type="text/css" href="../libs/ribbon/ribbon.css"/>
 <script src="NorlitJSCompiler.js"></script>
 <script src="../jquery/jquery.js"></script>
+<script src="../jquery/jquery-mousewheel.js"></script>
 <script src="../libs/orion/built-editor.js"></script>
 <script src="../libs/orion/custom-editor.js"></script>
 <script src="../jquery/jquery-orion.js"></script>
 <script src="../libs/ribbon/ribbon.js"></script>
 <script>
+	var possibleFontSizes=[12,13,14,15,16,18,20,22,24,26,28,32,36,40,44,48,54,60,66,72,80,88,96];
 	var Options={
 		errorTolerance: true,
 		validateOnType: true,
@@ -32,11 +34,40 @@
 		$("#validateOnType").change(function(){
 			Options.validateOnType=$("#validateOnType").ribbon('value');
 		});
+		$("#fontSizePicker").change(function(){
+			var newFont=$("#fontSizePicker").val();
+			var newFontSize=parseFloat(newFont);
+			if(!isFinite(newFontSize)){
+				$("#fontSizePicker").val(parseInt($("#text").css('font-size')));
+				return;
+			}
+			if(newFont!=newFontSize+""){
+				$("#fontSizePicker").val(newFontSize);
+			}
+			$("#text").css('font-size', newFontSize+"px").orion('refresh');
+		});
 		$("#text").orion('change', function(){
 			if(Options.validateOnType){
 				validate();
 			}
+		}).bind('mousewheel', function(event, delta, deltaX, deltaY) {
+			if (event.ctrlKey) {
+				var t = $("#text");
+				var fontSize = parseFloat(t.css('font-size'));
+				var index=possibleFontSizes.filter(function(a){return a<fontSize}).length+deltaY;
+				if(index<0){
+					index=0;
+				}else if(index>=possibleFontSizes.length){
+					index=possibleFontSizes.length-1;
+				}
+				console.log(fontSize,possibleFontSizes.filter(function(a){return a<fontSize}).length, deltaY);
+				fontSize=possibleFontSizes[index];
+				t.css('font-size', fontSize + "px").orion('refresh');
+				$("#fontSizePicker").val(fontSize);
+				event.preventDefault();
+			}
 		});
+
 		editor=$("#text")[0].orion;
 	});
 	var editor;
@@ -88,7 +119,8 @@
 			}
 		}
 		if(!context.hasError()){
-			ast = NorlitJSCompiler.ASTPass.apply(ast);
+			ast = NorlitJSCompiler.ASTPass.applyAll(ast);
+			ast = NorlitJSCompiler.ASTPass.apply(ast, NorlitJSCompiler.MinifyPass);
 			var str = NorlitJSCompiler.minify(ast).str;
 			$('#text').orion('text', str);
 			$('.x-statusbar').text("Minified without errors");
@@ -192,7 +224,7 @@
 		padding: 0px;
 		width: 100%;
 		height:100%;
-		font-size:14px;
+		font-size:16px;
 	}
 
 	::selection{
@@ -203,6 +235,13 @@
 		background: rgba(200, 200, 200,0.99);
 	}
 </style>
+<datalist id="fontsize">
+	<script>
+		possibleFontSizes.forEach(function(i){
+			document.write('<option value="'+i+'">'+i+'</option>');
+		});
+	</script>
+</datalist>
 </head>
 <body>
 <div class="x-titlebar">
@@ -220,7 +259,12 @@
 		<div xRole="button" xBehavior="toggle" xIcon="img/validateOnType.png" xText="Validate<br/>On Type" id="validateOnType" active></div>
 		<div xRole="button" xBehavior="toggle" xIcon="img/errorTolerance.png" xText="Error<br/>Tolerance" id="errorTolerance" active></div>
 	</div>
+	<div xRole="group" label="Font">
+		<div xRole="button" style="visibility:hidden;"></div>
+		<input list="fontsize" size="3" id="fontSizePicker" value="14"/>
+	</div>
 </div>
+
 <div class="x-main">
 <pre id="text" class="editor">
 </pre>

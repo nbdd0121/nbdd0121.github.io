@@ -283,12 +283,67 @@ define("norlit/editor", [
 		});
 	}
 
+	function templateMaker(template, options) {
+		var templateSplited = template.split('`');
+		var text = "";
+		var positions = [];
+		for (var i = 0; i < templateSplited.length; i++) {
+			if (i % 2 == 0) {
+				var sub = templateSplited[i];
+				if (options.indentation) {
+					sub = sub.replace(/\n/, '\n' + options.indentation);
+				}
+				text += sub;
+			} else {
+				positions.push({
+					offset: text.length,
+					length: templateSplited[i].length
+				});
+				text += templateSplited[i];
+			}
+		}
+		return {
+			proposal: text,
+			positions: positions
+		};
+	}
+
 	var keywords = [
 		"break", "case", "catch", "continue", "debugger", "default", "delete", "do",
-		"else", "finally", "for", "function", "if", "in", "instanceof", "new",
+		"else", "finally", "in", "instanceof", "new",
 		"return", "switch", "this", "throw", "try", "typeof", "var", "void",
 		"while", "with", "null", "true", "false"
 	];
+
+	var template = [{
+		hint: "if",
+		name: "If - If Statement <Template>",
+		template: 'if (`condition`) {\n\t``\n}'
+	}, {
+		hint: "if",
+		name: "If - If Else Statement <Template>",
+		template: 'if (`condition`) {\n\t``\n} else {\n\t``\n}'
+	}, {
+		hint: "for",
+		name: "For - Array Iteration <Template>",
+		template: 'for (var i = 0; i < `array`.length; i++) {\n\t``\n}'
+	}, {
+		hint: "for",
+		name: "For - Reverse Array Iteration <Template>",
+		template: 'for (var i = `array`.length; i >= 0; i--) {\n\t``\n}'
+	}, {
+		hint: "for",
+		name: "For - For-In Loop <Template>",
+		template: 'for (var `i` in `object`) {\n\t``\n}'
+	}, {
+		hint: "function",
+		name: "Function - Named Function <Template>",
+		template: 'function `name` (`parameters`) {\n\t``\n}'
+	}, {
+		hint: "function",
+		name: "Function - Anonymous Function <Template>",
+		template: 'function(`parameters`) {\n\t``\n}'
+	}];
 
 	function getType(id) {
 		if (id == "null") {
@@ -302,6 +357,20 @@ define("norlit/editor", [
 
 	exports.contentAssist = {
 		computeProposals: function(buffer, offset, context) {
+			var pL = context.prefix.length;
+			var templates = template.filter(function(k) {
+				return k.hint.indexOf(context.prefix) == 0;
+			}).map(function(k) {
+				var proposal = templateMaker(k.template, {
+					indent: context.indentation
+				});
+				proposal.description = k.name;
+				proposal.proposal = proposal.proposal.substr(pL);
+				for (var i = 0; i < proposal.positions.length; i++) {
+					proposal.positions[i].offset += offset - pL;
+				}
+				return proposal;
+			});
 			console.log(arguments);
 			return keywords.filter(function(k) {
 				return k.indexOf(context.prefix) == 0;
@@ -309,10 +378,10 @@ define("norlit/editor", [
 				var type = getType(k);
 				var proposal = {
 					proposal: k.substring(context.prefix.length),
-					description: type ? k + " : " + type : k
+					description: type ? k + " : " + type : k,
 				};
 				return proposal;
-			});
+			}).concat(templates);
 		}
 	}
 

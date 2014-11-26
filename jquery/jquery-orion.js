@@ -21,6 +21,17 @@
 		}
 		if (method !== undefined) {
 			switch (method) {
+				case 'refresh':
+					{
+						for (var i = 0; i < editors.length; i++) {
+							var o = editors[i];
+							o.getTextView().update(true);
+							var t = o.getText();
+							o.setText("");
+							o.setText(t);
+						}
+						return this;
+					}
 				case 'text':
 					{
 						if (arg0 === undefined) {
@@ -41,7 +52,7 @@
 						for (var i = 0; i < editors.length; i++) {
 							editors[i].getTextView().addEventListener("ModelChanged", arg0);
 						}
-						break;
+						return this;
 					}
 				default:
 					throw 'error';

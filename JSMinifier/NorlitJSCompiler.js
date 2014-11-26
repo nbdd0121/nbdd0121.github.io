@@ -93,18 +93,25 @@ NorlitJSCompiler.ASTPass = (function() {
 	ASTPass.register = function(a) {
 		ASTPass.push(a);
 	}
-	ASTPass.apply = function(ast) {
+	ASTPass.applyAll = function(ast) {
 		NorlitJSCompiler.ASTPass.forEach(function(pass) {
 			ast = NorlitJSCompiler.Visitor.traverse(ast, pass) || ast;
 		});
 		return ast;
+	}
+	ASTPass.apply = function(ast, pass) {
+		return NorlitJSCompiler.Visitor.traverse(ast, pass) || ast;
 	}
 	return ASTPass;
 })();
 
 require("./const.js");
 },{"./chartype":1,"./const.js":3,"./grammar.js":4,"./lex":5,"./visitor.js":7}],3:[function(require,module,exports){
-require("./compiler").ASTPass.register({
+'use strict';
+
+var NorlitJSCompiler = require("./compiler");
+
+NorlitJSCompiler.ASTPass.register({
 	leave: function(node, parent) {
 		switch (node.type) {
 			case 'BinaryExpression':
@@ -234,6 +241,7 @@ module.exports = function() {
 	function Node(type, len) {
 		this.type = type;
 	}
+	NorlitJSCompiler.Node = Node;
 
 	Node.prototype.push = function(obj) {
 		this[this.length++] = obj;
@@ -315,6 +323,15 @@ module.exports = function() {
 	Grammar.prototype.expect = function(id, errmsg) {
 		if (this.lookahead().type == id) {
 			return this.next();
+		}
+		this.throwErrorOnToken(null, errmsg);
+		if (this.context.tolerance) {
+			return {
+				type: 'illegal',
+				value: {
+					type: 'illegal'
+				}
+			};
 		}
 		throw new SyntaxError(errmsg);
 	}
@@ -745,7 +762,7 @@ module.exports = function() {
 	Grammar.prototype.lOrExprNoIn = binaryGen('||', "lAndExprNoIn");
 
 	Grammar.prototype.condExpr = function(noIn) {
-		var node = this[noIn ? "lOrExprNoIn" : "lOrExpr"]();
+		var node = noIn ? this.lOrExprNoIn() : this.lOrExpr();
 		if (this.lookahead().type == '?') {
 			var ret = new Node('ConditionalExpression');
 			this.next();
@@ -955,7 +972,7 @@ module.exports = function() {
 			this.next();
 			if (initExpr.type == 'VariableDeclaration') {
 				if (initExpr.declarations.length != 1) {
-					throw new SyntaxError("Too many variable declarations for a for-in statement");
+					this.throwErrorOnToken(null, "Too many variable declarations for a for-in statement");
 				}
 				initExpr = initExpr.declarations[0];
 			}
@@ -1018,7 +1035,7 @@ module.exports = function() {
 				var key = this.expression();
 			} else if (lhd.type == 'default') {
 				if (def) {
-					throw new SyntaxError("Only one default clause is permitted in switch statement");
+					this.throwErrorOnToken(null, "Only one default clause is permitted in switch statement");
 				}
 				def = true;
 				var key = undefined;
@@ -1142,7 +1159,7 @@ module.exports = function() {
 	Grammar.prototype.funcDecl = function() {
 		var func = this.funcExpr();
 		if (!func.name) {
-			throw new SyntaxError("Expected function name in function declaration");
+			this.throwErrorOnToken(null, "Expected function name in function declaration");
 		}
 		func.type = 'FunctionDeclaration';
 		return func;
@@ -1340,6 +1357,10 @@ module.exports = function() {
 		this.lineBefore = false;
 		this.parseId = true;
 	}
+
+	Lex.Token = Token;
+	Lex.ILLEGAL = new Token('<illegal>');
+	Lex.ILLEGAL.value = Lex.ILLEGAL;
 
 	function subChar(a, b) {
 		return a.charCodeAt(0) - b.charCodeAt(0);
@@ -2822,6 +2843,39 @@ function minify(ast) {
     }
 }
 
+exports.MinifyPass = {
+    leave: function(node, parent) {
+        switch (node.type) {
+            case 'IfStatement':
+                {
+                    if (!(node.test instanceof Object)) {
+                        if (node.test) {
+                            return node.true;
+                        } else {
+                            return node.false === undefined ? new NorlitJSCompiler.Node('EmptyStatement') : node.false;
+                        }
+                    } else {
+                        if (node.false === undefined) {
+                            break;
+                        } else {
+                            if (node.true.type == 'ExpressionStatement' && node.false.type == 'ExpressionStatement') {
+                                var replace = new NorlitJSCompiler.Node('ConditionalExpression');
+                                replace.test = node.test;
+                                replace.true = node.true.expression;
+                                replace.false = node.false.expression;
+                                var replaceWrap = new NorlitJSCompiler.Node('ExpressionStatement');
+                                replaceWrap.expression = replace;
+                                return replaceWrap;
+                            }
+                        }
+                    }
+                    break;
+                }
+        }
+
+    },
+    noLiteralVisit: true
+};
 exports.minify = minify;
 },{"../compiler":2}],7:[function(require,module,exports){
 var syntax = {
@@ -2933,5 +2987,7 @@ exports.traverse = function(ast, options) {
 }
 },{}],8:[function(require,module,exports){
 window.NorlitJSCompiler = require("./compiler.js");
-window.NorlitJSCompiler.minify = require("./module/minify").minify;
+var minify = require("./module/minify");
+window.NorlitJSCompiler.minify = minify.minify;
+window.NorlitJSCompiler.MinifyPass = minify.MinifyPass;
 },{"./compiler.js":2,"./module/minify":6}]},{},[8]);
