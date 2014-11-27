@@ -81,7 +81,13 @@
 		});
 	}
 
+	var buzy=false;
+
 	function validate(){
+		if(buzy){
+			return;
+		}
+		buzy=true;
 		editor.removeAllAnnotationMarks();
 
 		var context = new NorlitJSCompiler.Context(Options.errorTolerance);
@@ -102,13 +108,19 @@
 		}else{
 			$('.x-statusbar').text(context.errors.length==1?'1 error is found':context.errors.length+' errors are found');
 		}
+		buzy=false;
 	}
 	function minify(){
+		if(buzy){
+			return;
+		}
+		buzy=true;
 		editor.removeAllAnnotationMarks();
 
 		var context = new NorlitJSCompiler.Context(Options.errorTolerance);
+		var text=$("#text").orion('text');
 		try{
-			var ast = NorlitJSCompiler.Parser($("#text").orion('text'), context);
+			var ast = NorlitJSCompiler.Parser(text, context);
 		}catch(e){
 			if(e instanceof SyntaxError){
 				context.errors.push(e);
@@ -119,11 +131,12 @@
 			}
 		}
 		if(!context.hasError()){
+			NorlitJSCompiler.ScopeAnalysis(ast);
 			ast = NorlitJSCompiler.ASTPass.applyAll(ast);
 			ast = NorlitJSCompiler.ASTPass.apply(ast, NorlitJSCompiler.MinifyPass);
 			var str = NorlitJSCompiler.minify(ast).str;
 			$('#text').orion('text', str);
-			$('.x-statusbar').text("Minified without errors");
+			$('.x-statusbar').text("Minified without errors. Compressed from "+text.length+" bytes to "+str.length+" bytes");
 		}else{
 			displayInfo(context);
 			$('.x-statusbar').text(
@@ -131,6 +144,7 @@
 				' found, minification failed'
 			);
 		}
+		buzy=false;
 	}
 
 	function openFile(){

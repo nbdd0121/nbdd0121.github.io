@@ -309,13 +309,16 @@ define("norlit/editor", [
 	}
 
 	var keywords = [
-		"break", "case", "catch", "continue", "debugger", "default", "delete", "do",
-		"else", "finally", "in", "instanceof", "new",
-		"return", "switch", "this", "throw", "try", "typeof", "var", "void",
-		"while", "with", "null", "true", "false"
+		"break", "case", "catch", "continue", "debugger", "default", "delete", "else",
+		"finally", "in", "instanceof", "new", "return", "this", "throw", "typeof",
+		"var", "void", "null", "true", "false"
 	];
 
 	var template = [{
+		hint: "do",
+		name: "Do - Do-While Loop <Template>",
+		template: 'do {\n\t``\n} while (`condition`);'
+	}, {
 		hint: "if",
 		name: "If - If Statement <Template>",
 		template: 'if (`condition`) {\n\t``\n}'
@@ -343,6 +346,30 @@ define("norlit/editor", [
 		hint: "function",
 		name: "Function - Anonymous Function <Template>",
 		template: 'function(`parameters`) {\n\t``\n}'
+	}, {
+		hint: "switch",
+		name: "Switch - Switch Case <Template>",
+		template: 'switch (`expression`) {\n\t``\n}'
+	}, {
+		hint: "try",
+		name: "Try - Try Catch Statement <Template>",
+		template: 'try {\n\t``\n} catch (`e`) {\n\t``\n}'
+	}, {
+		hint: "try",
+		name: "Try - Try Finally Statement <Template>",
+		template: 'try {\n\t``\n} finally {\n\t``\n}'
+	}, {
+		hint: "try",
+		name: "Try - Try Catch Finally Statement <Template>",
+		template: 'try {\n\t``\n} catch (`e`) {\n\t``\n} finally {\n\t``\n}'
+	}, {
+		hint: "while",
+		name: 'While - While Loop <Template>',
+		template: 'while (`condition`) {\n\t``\n}'
+	}, {
+		hint: "with",
+		name: 'With - With Statement <Template>',
+		template: 'with (`base`) {\n\t``\n}'
 	}];
 
 	function getType(id) {
