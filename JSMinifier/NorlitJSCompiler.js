@@ -1043,27 +1043,26 @@ exports.MinifyPass = {
                     scope.id = id;
                     break;
                 }
-                /*case 'WithStatement':
-                    {
-                        scopeChain.push(scope);
-                        scope = ast.scope;
-                        break;
-                    }
-                case 'TryStatement':
-                    {
-                        if (ast.parameter !== undefined) {
-                            NorlitJSCompiler.Visitor.traverse(ast.try, identifierResolver);
-                            scopeChain.push(scope);
-                            scope = ast.scope;
-                            NorlitJSCompiler.Visitor.traverse(ast.catch, identifierResolver);
-                            scope = scopeChain.pop();
-                            if (ast.finally !== undefined) {
-                                NorlitJSCompiler.Visitor.traverse(ast.finally, identifierResolver);
-                            }
-                            return ast;
+            case 'WithStatement':
+                {
+                    node.scope.id = node.scope.outer.id;
+                }
+            case 'TryStatement':
+                {
+                    if (node.scope !== undefined) {
+                        var scope = node.scope;
+                        var id = scope.outer.id;
+                        if (scope.optimize) {
+                            var symbol = scope.symbol;
+                            var varName;
+                            while (scope.outer.resolve(varName = variableName(id++)));
+                            symbol.name = varName;
+                            id++;
                         }
-                        break;
-                    }*/
+                        scope.id = id;
+                    }
+                    break;
+                }
         }
     },
     leave: function(node, parent) {
@@ -1340,11 +1339,15 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 						}
 						break;
 					}
+				case 'CallExpression':
+					{
+						if (ast.callee.type == 'Identifier' & ast.callee.name == 'eval') {
+							scope.disableOptimize();
+						}
+						break;
+					}
 			}
 			if (ast.type == 'Identifier') {
-				if (ast.name == 'eval') {
-					scope.disableOptimize();
-				}
 				var symbol = scope.resolve(ast.name);
 				if (symbol) {
 					return symbol;
