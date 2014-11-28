@@ -75,117 +75,227 @@ require("./const.js");
 
 var NorlitJSCompiler = require("./compiler");
 
+var ASTBuilder = NorlitJSCompiler.ASTBuilder;
+
 NorlitJSCompiler.ASTPass.register({
 	leave: function(node, parent) {
 		switch (node.type) {
+			case 'Symbol':
+			case 'ThisExpression':
+			case 'Constant':
+			case 'FunctionExpression':
+				{
+					node.sideEffect = false;
+					break;
+				}
+			case 'EmptyStatement':
+				{
+					node.sideEffect = false;
+					break;
+				}
+			case 'ExpressionStatement':
+				{
+					if (!node.expression.sideEffect) {
+						node = new NorlitJSCompiler.Node('EmptyStatement');
+						node.sideEffect = false;
+						return node;
+					}
+					node.sideEffect = true;
+					break;
+				}
+			case 'IfStatement':
+				{
+					if (node.false && !node.false.sideEffect) {
+						node.false = undefined;
+					}
+					if (!node.true.sideEffect) {
+						node.true = undefined;
+					}
+					if (node.true === undefined && node.false === undefined) {
+						if (node.test.sideEffect) {
+							var wrap = new NorlitJSCompiler.Node('ExpressionStatement');
+							wrap.expression = node.test;
+							wrap.sideEffect = true;
+							return wrap;
+						} else {
+							return NorlitJSCompiler.Node.EMPTY;
+						}
+					}
+					if (node.true === undefined) {
+						var wrap = new NorlitJSCompiler.Node('UnaryExpression');
+						wrap.operator = '!';
+						wrap.operand = node.test;
+						wrap.sideEffect = node.test.sideEffect;
+						node.test = wrap;
+						node.true = node.false;
+						node.false = undefined;
+					}
+					if (node.test.type == 'Constant') {
+						if (node.test.value) {
+							return node.true;
+						} else {
+							return node.false === undefined ? NorlitJSCompiler.Node.EMPTY : node.false;
+						}
+					}
+					if (node.false) {
+						node.sideEffect = node.test.sideEffect || node.true.sideEffect;
+					} else {
+						node.sideEffect = node.test.sideEffect || node.true.sideEffect || node.false.sideEffect;
+					}
+					break;
+				}
+			case 'BlockStatement':
+				{
+					for (var i = 0; i < node.body.length; i++) {
+						if (!node.body[i].sideEffect) {
+							node.body.splice(i, 1);
+							i--;
+						}
+					}
+					node.sideEffect = node.body.length != 0;
+					break;
+				}
 			case 'BinaryExpression':
 				{
-					var lC = !(node.left instanceof Object),
-						rC = !(node.right instanceof Object);
-					if (lC && !rC) {
+					if (node.left.type == 'Constant' && node.right.type != 'Constant') {
 						switch (node.operator) {
 							case '&&':
 								{
-									return node.left ? node.right : node.left;
+									return node.left.value ? node.right : node.left;
 								}
 							case '||':
 								{
 									return node.left ? node.left : node.right;
 								}
 						}
-					} else if (lC && rC) {
+					} else if (node.left.type == 'Constant' && node.right.type == 'Constant') {
+						var l = node.left.value,
+							r = node.right.value;
 						switch (node.operator) {
 							case '*':
-								return node.left * node.right;
+								return ASTBuilder.wrapConstant(l * r);
 							case '/':
-								return node.left / node.right;
+								return ASTBuilder.wrapConstant(l / r);
 							case '%':
-								return node.left % node.right;
+								return ASTBuilder.wrapConstant(l % r);
 							case '+':
-								return node.left + node.right;
+								return ASTBuilder.wrapConstant(l + r);
 							case '-':
-								return node.left - node.right;
+								return ASTBuilder.wrapConstant(l - r);
 							case '<<':
-								return node.left << node.right;
+								return ASTBuilder.wrapConstant(l << r);
 							case '>>':
-								return node.left >> node.right;
+								return ASTBuilder.wrapConstant(l >> r);
 							case '>>>':
-								return node.left >>> node.right;
+								return ASTBuilder.wrapConstant(l >>> r);
 							case '<':
-								return node.left < node.right;
+								return ASTBuilder.wrapConstant(l < r);
 							case '>':
-								return node.left > node.right;
+								return ASTBuilder.wrapConstant(l > r);
 							case '<=':
-								return node.left <= node.right;
+								return ASTBuilder.wrapConstant(l <= r);
 							case '>=':
-								return node.left >= node.right;
+								return ASTBuilder.wrapConstant(l >= r);
 							case 'instanceof':
 							case 'in':
 								throw new TypeError("TypeCheckError");
 							case '==':
-								return node.left == node.right;
+								return ASTBuilder.wrapConstant(l == r);
 							case '!=':
-								return node.left != node.right;
+								return ASTBuilder.wrapConstant(l != r);
 							case '===':
-								return node.left === node.right;
+								return ASTBuilder.wrapConstant(l === r);
 							case '!==':
-								return node.left !== node.right;
+								return ASTBuilder.wrapConstant(l !== r);
 							case '&':
-								return node.left & node.right;
+								return ASTBuilder.wrapConstant(l & r);
 							case '|':
-								return node.left | node.right;
+								return ASTBuilder.wrapConstant(l | r);
 							case '^':
-								return node.left ^ node.right;
+								return ASTBuilder.wrapConstant(l ^ r);
 							case '&&':
-								return node.left && node.right;
+								return ASTBuilder.wrapConstant(l && r);
 							case '||':
-								return node.left || node.right;
+								return ASTBuilder.wrapConstant(l || r);
 							case ',':
 								return node.right;
 							default:
 								throw 'Operation ' + node.operator;
 						}
 					}
+					node.sideEffect = node.left.sideEffect | node.right.sideEffect;
 					break;
 				}
 			case 'ConditionalExpression':
 				{
-					if (!(node.test instanceof Object)) {
-						return node.test ? node.true : node.false;
+					if (node.test.type == 'Constant') {
+						return node.test.value ? node.true : node.false;
 					}
+					node.sideEffect = node.test.sideEffect || node.true.sideEffect || node.false.sideEffect;
 					break;
 				}
 			case 'UnaryExpression':
 				{
-					if (!(node.operand instanceof Object)) {
+					if (!node.operand.sideEffect) {
+						switch (node.operator) {
+							case 'delete':
+								{
+									return ASTBuilder.wrapConstant(true);
+								}
+							case 'void':
+								{
+									node.operand = ASTBuilder.wrapConstant(0);
+									node.sideEffect = false;
+									return node;
+								}
+						}
+					}
+					if (node.operand.type == 'Constant') {
+						var v = node.operand.value;
 						switch (node.operator) {
 							case '+':
-								return +node.operand;
+								return ASTBuilder.wrapConstant(+v);
 							case '-':
-								return -node.operand;
-							case 'delete':
-								break;
-							case 'void':
-								node.operand = 0;
-								return node;
+								return ASTBuilder.wrapConstant(-v);
 							case 'typeof':
-								return typeof(node.operand);
+								return ASTBuilder.wrapConstant(typeof(v));
 							case '++':
 								throw new TypeError("TypeCheckError");
 							case '--':
 								throw new TypeError("TypeCheckError");
 							case '!':
-								return !node.operand;
+								return ASTBuilder.wrapConstant(!v);
 							case '~':
-								return ~node.operand;
+								return ASTBuilder.wrapConstant(~v);
 							default:
 								throw 'Operation ' + node.operator;
 						}
 					}
+					switch (node.operator) {
+						case 'delete':
+						case '++':
+						case '--':
+							node.sideEffect = true;
+							break;
+						case 'void':
+						case '+':
+						case '-':
+						case 'typeof':
+						case '!':
+						case '~':
+							node.sideEffect = node.operand.sideEffect;
+							break;
+						default:
+							throw 'Operation ' + node.operator;
+					}
+					break;
+				}
+			default:
+				{
+					node.sideEffect = true;
 					break;
 				}
 		}
-
 	},
 	noLiteralVisit: true
 });
@@ -373,513 +483,512 @@ function minifyToString(ast) {
 }
 
 function minify(ast) {
-    if (ast instanceof Object) {
-        switch (ast.type) {
-            case 'Identifier':
-                {
-                    return {
-                        str: ast.name,
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'Symbol':
-                {
-                    return {
-                        str: ast.name,
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'ThisExpression':
-                {
-                    return {
-                        str: "this",
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'RegexpLiteral':
-                {
-                    return {
-                        str: "/" + ast.regexp + "/" + ast.flags,
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'ObjectInitializer':
-                {
-                    return {
-                        str: "{" + ast.elements.map(minifyToString).join(",") + "}",
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'Property':
-                {
-                    var name = (isIdentifierName(ast.key) || +name + "" == name) ? ast.key : minifyString(ast.key).str;
-                    return {
-                        str: name + ":" + wrap(minify(ast.value), 'AssignmentExpression').str
-                    };
-                }
-            case 'Getter':
-                {
-                    var str = "get " + ast.key + "(){"
-                    for (var i = 0; i < ast.body.length; i++) {
-                        str += minify(ast.body[i]).str;
-                    }
-                    str += "}";
-                    return {
-                        str: str,
-                    };
-                }
-            case 'Setter':
-                {
-                    var str = "set " + ast.key + "(" + ast.parameter + "){"
-                    for (var i = 0; i < ast.body.length; i++) {
-                        str += minify(ast.body[i]).str;
-                    }
-                    str += "}";
-                    return {
-                        str: str,
-                    };
-                }
-            case 'ArrayInitializer':
-                {
-                    var str = "[";
-                    for (var i = 0; i < ast.elements.length; i++) {
-                        if (i != 0) {
-                            str += ",";
+    switch (ast.type) {
+        case 'Constant':
+            {
+                switch (typeof(ast.value)) {
+                    case 'number':
+                        return minifyNumber(ast.value);
+                    case 'object':
+                        return {
+                            str: "null",
+                            p: 'PrimaryExpression'
                         }
-                        if (ast.elements[i] !== undefined) {
-                            str += wrap(minify(ast.elements[i]), 'AssignmentExpression').str;
-                        } else if (i == ast.elements.length - 1) {
-                            str += ",";
+                    case 'string':
+                        return minifyString(ast.value);
+                    case 'boolean':
+                        return {
+                            str: '!' + Number(!ast.value),
+                            p: "UnaryExpression"
                         }
-                    }
-                    return {
-                        str: str + "]",
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'MemberExpression':
-                {
-                    var base = wrap(minify(ast.base), 'LeftHandSideExpression');
-                    if (typeof(ast.property) == 'string' && isIdentifierName(ast.property)) {
-                        if (typeof(ast.base) == 'number' && base.p == 'PrimaryExpression' &&
-                            base.str.indexOf('.') == -1 && base.str.indexOf('E') == -1) {
-                            base.str += " ";
-                        }
+                    default:
                         return {
-                            str: base.str + '.' + ast.property,
-                            p: '.'
-                        }
-                    } else {
-                        return {
-                            str: base.str + '[' + minify(ast.property, 'Expression').str + ']',
-                            p: '.'
-                        }
-                    }
-                }
-            case 'NewExpression':
-                {
-                    var str = 'new ' + wrap(minify(ast.constructor), '.').str;
-                    str += "(" + ast.arguments.map(function(a) {
-                        return wrap(minify(a), 'AssignmentExpression').str;
-                    }).join(",") + ")";
-                    return {
-                        str: str,
-                        p: "LeftHandSideExpression"
-                    };
-                }
-            case 'CallExpression':
-                {
-                    var str = wrap(minify(ast.callee), 'LeftHandSideExpression').str + '(';
-                    for (var i = 0; i < ast.arguments.length; i++) {
-                        if (i != 0) {
-                            str += ",";
-                        }
-                        str += wrap(minify(ast.arguments[i]), 'AssignmentExpression').str;
-                    }
-                    return {
-                        str: str + ")",
-                        p: "LeftHandSideExpression"
-                    };
-                }
-            case 'PostfixExpression':
-                {
-                    return {
-                        str: wrap(minify(ast.operand), 'LeftHandSideExpression').str + ast.operator,
-                        p: 'PostfixExpression'
-                    };
-                }
-            case 'UnaryExpression':
-                {
-                    switch (ast.operator) {
-                        case 'delete':
-                        case 'void':
-                        case 'typeof':
-                            return {
-                                str: ast.operator + " " + wrap(minify(ast.operand), 'UnaryExpression').str,
-                                p: 'UnaryExpression'
-                            };
-                        case '+':
-                        case '-':
-                            var operand = wrap(minify(ast.operand), 'UnaryExpression').str;
-                            if (operand[0] == ast.operator)
-                                operand = ' ' + operand;
-                            return {
-                                str: ast.operator + operand,
-                                p: 'UnaryExpression'
-                            };
-                        default:
-                            return {
-                                str: ast.operator + wrap(minify(ast.operand), 'UnaryExpression').str,
-                                p: 'UnaryExpression'
-                            };
-                    }
-                }
-            case 'BinaryExpression':
-                {
-                    var type;
-                    switch (ast.operator) {
-                        case '+':
-                        case '-':
-                            {
-                                var right = wrap(minify(ast.right), '+', true).str;
-                                if (right[0] == ast.operator)
-                                    right = ' ' + right;
-                                return {
-                                    str: wrap(minify(ast.left), '+').str + ast.operator + right,
-                                    p: '+'
-                                };
-                            }
-                        case '*':
-                        case '/':
-                        case '%':
-                            type = '*';
-                            break;
-                        case '<<':
-                        case '>>':
-                        case '>>>':
-                            type = '<<';
-                            break;
-                        case '<':
-                        case '>':
-                        case '<=':
-                        case '>=':
-                            type = '<';
-                            break;
-                        case 'instanceof':
-                        case 'in':
-                            return {
-                                str: wrap(minify(ast.left), '<').str + " " + ast.operator + " " + wrap(minify(ast.right), '<', true).str,
-                                p: '<'
-                            };
-                        case '==':
-                        case '!=':
-                        case '===':
-                        case '!==':
-                            type = '==';
-                            break;
-                        case '&':
-                        case '^':
-                        case '|':
-                        case '&&':
-                        case '||':
-                            type = ast.operator;
-                            break;
-                        case ',':
-                            type = 'Expression';
-                            break;
-                        default:
-                            throw 'BinaryExpression ' + ast.operator;
-                    }
-                    return {
-                        str: wrap(minify(ast.left), type).str + ast.operator + wrap(minify(ast.right), type, true).str,
-                        p: type
-                    };
-                }
-            case 'ConditionalExpression':
-                {
-                    return {
-                        str: wrap(minify(ast.test), '||').str + "?" +
-                            wrap(minify(ast.true), 'AssignmentExpression').str + ":" +
-                            wrap(minify(ast.false), 'AssignmentExpression').str,
-                        p: 'ConditionalExpression'
-                    };
-                }
-            case 'AssignmentExpression':
-                {
-                    return {
-                        str: wrap(minify(ast.left), 'AssignmentExpression', true).str + ast.operator + wrap(minify(ast.right), 'AssignmentExpression').str,
-                        p: 'AssignmentExpression'
-                    };
-                }
-            case 'DebuggerStatement':
-                {
-                    return {
-                        str: "debugger;"
-                    };
-                }
-            case 'EmptyStatement':
-                {
-                    return {
-                        str: ";"
-                    };
-                }
-            case 'BlockStatement':
-                {
-                    return {
-                        str: "{" + ast.body.map(minifyToString).join("") + "}"
-                    };
-                }
-            case 'IfStatement':
-                {
-                    var str = "if(" + minify(ast.test).str + ")" + minify(ast.true).str;
-                    if (ast.false !== undefined) {
-                        str += "else " + minify(ast.false).str;
-                    }
-                    return {
-                        str: str
-                    };
-                }
-            case 'WithStatement':
-                {
-                    return {
-                        str: "with(" + minify(ast.base).str + ")" + minify(ast.body).str
-                    };
-                }
-            case 'WhileStatement':
-                {
-                    return {
-                        str: "while(" + minify(ast.test).str + ")" + minify(ast.body).str
-                    };
-                }
-            case 'DoStatement':
-                {
-                    return {
-                        str: "do " + minify(ast.body).str + "while(" + minify(ast.test).str + ");"
-                    };
-                }
-            case 'ForStatement':
-                {
-                    var str = "for(";
-                    if (ast.init !== undefined) {
-                        if (ast.init && ast.init.type == 'VariableDeclaration')
-                            str += minify(ast.init).str;
-                        else
-                            str += minify(ast.init).str + ";";
-                    } else {
-                        str += ";";
-                    }
-                    if (ast.test !== undefined) str += minify(ast.test).str;
-                    str += ";";
-                    if (ast.inc !== undefined) str += minify(ast.inc).str;
-                    str += ")" + minify(ast.body).str;
-                    return {
-                        str: str
-                    };
-                }
-            case 'ForInStatement':
-                {
-                    var str = "for(";
-                    if (ast.init && ast.init.type == 'VariableDeclarator')
-                        str += "var " + minify(ast.var);
-                    else
-                        str += minify(ast.var).str;
-                    return {
-                        str: str + " in " + minify(ast.container).str + ")" + minify(ast.body).str
-                    };
-                }
-            case 'TryStatement':
-                {
-                    var str = "try " + minify(ast.body).str;
-                    if (ast.catch !== undefined) {
-                        var param = ast.parameter;
-                        if (param instanceof Object) {
-                            param = param.name;
-                        }
-                        str += "catch(" + param + ")" + minify(ast.catch).str;
-                    }
-                    if (ast.finally !== undefined) {
-                        str += "finally" + minify(ast.finally).str;
-                    }
-                    return {
-                        str: str
-                    };
-                }
-            case 'SwitchStatement':
-                {
-                    return {
-                        str: "switch(" + minify(ast.expression).str + "){" + ast.body.map(minifyToString).join("") + "}"
-                    };
-                }
-            case 'CaseClause':
-                {
-                    if (ast.key === undefined) {
-                        return {
-                            str: "default:" + ast.body.map(minifyToString).join("")
+                            str: ast.value + "",
+                            p: 'PrimaryExpression'
                         };
-                    } else {
-                        return {
-                            str: "case " + minify(ast.key).str + ":" + ast.body.map(minifyToString).join("")
-                        };
-                    }
                 }
-            case 'ReturnStatement':
-                {
-                    if (ast.expression === undefined) {
-                        return {
-                            str: "return;"
-                        };
-                    } else {
-                        return {
-                            str: "return " + minify(ast.expression).str + ";",
-                        };
-                    }
-                }
-            case 'ThrowStatement':
-                {
-                    return {
-                        str: "throw " + minify(ast.expression).str + ";",
-                    };
-                }
-            case 'BreakStatement':
-                {
-                    if (ast.label === undefined) {
-                        return {
-                            str: "break;"
-                        };
-                    } else {
-                        return {
-                            str: "break " + ast.label + ";",
-                        };
-                    }
-                }
-            case 'ContinueStatement':
-                {
-                    if (ast.label === undefined) {
-                        return {
-                            str: "continue;"
-                        };
-                    } else {
-                        return {
-                            str: "continue " + ast.label + ";",
-                        };
-                    }
-                }
-            case 'LabeledStatement':
-                {
-                    return {
-                        str: ast.label + ":" + minify(ast.body).str
-                    };
-                }
-            case 'FunctionExpression':
-            case 'FunctionDeclaration':
-                {
-                    var str = "function";
-                    if (ast.name) {
-                        str += " " + (ast.name instanceof Object ? ast.name.name : ast.name);
-                    }
-                    str += "(";
-                    str += ast.parameter.map(function(a) {
-                        if (a instanceof Object) {
-                            return a.name;
-                        } else {
-                            return a;
-                        }
-                    }).join(",");
-                    str += "){";
-                    for (var i = 0; i < ast.body.length; i++) {
-                        str += minify(ast.body[i]).str;
-                    }
-                    str += "}";
-                    return {
-                        str: str,
-                        p: 'PrimaryExpression'
-                    };
-                }
-            case 'Program':
-                {
-                    var str = "";
-                    for (var i = 0; i < ast.body.length; i++) {
-                        str += minify(ast.body[i]).str;
-                    }
-                    return {
-                        str: str
-                    };
-                }
-            case 'DirectiveStatement':
-                {
-                    return {
-                        str: ast.raw + ";"
-                    };
-                }
-            case 'ExpressionStatement':
-                {
-                    var str = minify(ast.expression).str;
-                    if (typeof(ast.expression) == "string" || str.indexOf("function ") == 0 || str.indexOf("function(") == 0) {
-                        return {
-                            str: "(" + str + ");"
-                        };
-                    } else {
-                        return {
-                            str: str.indexOf("function") == 0 ? "(" + str + ");" : str + ";"
-                        };
-                    }
-                }
-
-            case 'VariableDeclaration':
-                {
-                    var str = "var ";
-                    for (var i = 0; i < ast.declarations.length; i++) {
-                        if (i != 0) {
-                            str += ",";
-                        }
-                        str += minify(ast.declarations[i]).str;
-                    }
-                    return {
-                        str: str + ";"
-                    };
-                }
-            case 'VariableDeclarator':
-                {
-                    var name = ast.name;
-                    if (name instanceof Object) {
-                        name = name.name;
-                    }
-                    if (ast.init !== undefined) {
-                        return {
-                            str: name + '=' + wrap(minify(ast.init), 'AssignmentExpression').str
-                        };
-                    } else {
-                        return {
-                            str: name
-                        };
-                    }
-                }
-            default:
-                throw ast;
-        }
-    } else {
-        switch (typeof(ast)) {
-            case 'number':
-                return minifyNumber(ast);
-            case 'object':
+            }
+        case 'Identifier':
+            {
                 return {
-                    str: "null",
-                    p: 'PrimaryExpression'
-                }
-            case 'string':
-                return minifyString(ast);
-            case 'boolean':
-                return {
-                    str: '!' + Number(!ast),
-                    p: "UnaryExpression"
-                }
-            default:
-                return {
-                    str: ast + "",
+                    str: ast.name,
                     p: 'PrimaryExpression'
                 };
+            }
+        case 'Symbol':
+            {
+                return {
+                    str: ast.name,
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'ThisExpression':
+            {
+                return {
+                    str: "this",
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'RegexpLiteral':
+            {
+                return {
+                    str: "/" + ast.regexp + "/" + ast.flags,
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'ObjectInitializer':
+            {
+                return {
+                    str: "{" + ast.elements.map(minifyToString).join(",") + "}",
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'Property':
+            {
+                var name = (isIdentifierName(ast.key) || +name + "" == name) ? ast.key : minifyString(ast.key).str;
+                return {
+                    str: name + ":" + wrap(minify(ast.value), 'AssignmentExpression').str
+                };
+            }
+        case 'Getter':
+            {
+                var str = "get " + ast.key + "(){"
+                for (var i = 0; i < ast.body.length; i++) {
+                    str += minify(ast.body[i]).str;
+                }
+                str += "}";
+                return {
+                    str: str,
+                };
+            }
+        case 'Setter':
+            {
+                var str = "set " + ast.key + "(" + ast.parameter + "){"
+                for (var i = 0; i < ast.body.length; i++) {
+                    str += minify(ast.body[i]).str;
+                }
+                str += "}";
+                return {
+                    str: str,
+                };
+            }
+        case 'ArrayInitializer':
+            {
+                var str = "[";
+                for (var i = 0; i < ast.elements.length; i++) {
+                    if (i != 0) {
+                        str += ",";
+                    }
+                    if (ast.elements[i] !== undefined) {
+                        str += wrap(minify(ast.elements[i]), 'AssignmentExpression').str;
+                    } else if (i == ast.elements.length - 1) {
+                        str += ",";
+                    }
+                }
+                return {
+                    str: str + "]",
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'MemberExpression':
+            {
+                var base = wrap(minify(ast.base), 'LeftHandSideExpression');
+                if (ast.property.type == 'Constant' && typeof(ast.property.value) == 'string' && isIdentifierName(ast.property.value)) {
+                    if (typeof(ast.base) == 'number' && base.p == 'PrimaryExpression' &&
+                        base.str.indexOf('.') == -1 && base.str.indexOf('E') == -1) {
+                        base.str += " ";
+                    }
+                    return {
+                        str: base.str + '.' + ast.property.value,
+                        p: '.'
+                    }
+                } else {
+                    return {
+                        str: base.str + '[' + minify(ast.property, 'Expression').str + ']',
+                        p: '.'
+                    }
+                }
+            }
+        case 'NewExpression':
+            {
+                var str = 'new ' + wrap(minify(ast.constructor), '.').str;
+                str += "(" + ast.arguments.map(function(a) {
+                    return wrap(minify(a), 'AssignmentExpression').str;
+                }).join(",") + ")";
+                return {
+                    str: str,
+                    p: "LeftHandSideExpression"
+                };
+            }
+        case 'CallExpression':
+            {
+                var str = wrap(minify(ast.callee), 'LeftHandSideExpression').str + '(';
+                for (var i = 0; i < ast.arguments.length; i++) {
+                    if (i != 0) {
+                        str += ",";
+                    }
+                    str += wrap(minify(ast.arguments[i]), 'AssignmentExpression').str;
+                }
+                return {
+                    str: str + ")",
+                    p: "LeftHandSideExpression"
+                };
+            }
+        case 'PostfixExpression':
+            {
+                return {
+                    str: wrap(minify(ast.operand), 'LeftHandSideExpression').str + ast.operator,
+                    p: 'PostfixExpression'
+                };
+            }
+        case 'UnaryExpression':
+            {
+                switch (ast.operator) {
+                    case 'delete':
+                    case 'void':
+                    case 'typeof':
+                        return {
+                            str: ast.operator + " " + wrap(minify(ast.operand), 'UnaryExpression').str,
+                            p: 'UnaryExpression'
+                        };
+                    case '+':
+                    case '-':
+                        var operand = wrap(minify(ast.operand), 'UnaryExpression').str;
+                        if (operand[0] == ast.operator)
+                            operand = ' ' + operand;
+                        return {
+                            str: ast.operator + operand,
+                            p: 'UnaryExpression'
+                        };
+                    default:
+                        return {
+                            str: ast.operator + wrap(minify(ast.operand), 'UnaryExpression').str,
+                            p: 'UnaryExpression'
+                        };
+                }
+            }
+        case 'BinaryExpression':
+            {
+                var type;
+                switch (ast.operator) {
+                    case '+':
+                    case '-':
+                        {
+                            var right = wrap(minify(ast.right), '+', true).str;
+                            if (right[0] == ast.operator)
+                                right = ' ' + right;
+                            return {
+                                str: wrap(minify(ast.left), '+').str + ast.operator + right,
+                                p: '+'
+                            };
+                        }
+                    case '*':
+                    case '/':
+                    case '%':
+                        type = '*';
+                        break;
+                    case '<<':
+                    case '>>':
+                    case '>>>':
+                        type = '<<';
+                        break;
+                    case '<':
+                    case '>':
+                    case '<=':
+                    case '>=':
+                        type = '<';
+                        break;
+                    case 'instanceof':
+                    case 'in':
+                        return {
+                            str: wrap(minify(ast.left), '<').str + " " + ast.operator + " " + wrap(minify(ast.right), '<', true).str,
+                            p: '<'
+                        };
+                    case '==':
+                    case '!=':
+                    case '===':
+                    case '!==':
+                        type = '==';
+                        break;
+                    case '&':
+                    case '^':
+                    case '|':
+                    case '&&':
+                    case '||':
+                        type = ast.operator;
+                        break;
+                    case ',':
+                        type = 'Expression';
+                        break;
+                    default:
+                        throw 'BinaryExpression ' + ast.operator;
+                }
+                return {
+                    str: wrap(minify(ast.left), type).str + ast.operator + wrap(minify(ast.right), type, true).str,
+                    p: type
+                };
+            }
+        case 'ConditionalExpression':
+            {
+                return {
+                    str: wrap(minify(ast.test), '||').str + "?" +
+                        wrap(minify(ast.true), 'AssignmentExpression').str + ":" +
+                        wrap(minify(ast.false), 'AssignmentExpression').str,
+                    p: 'ConditionalExpression'
+                };
+            }
+        case 'AssignmentExpression':
+            {
+                return {
+                    str: wrap(minify(ast.left), 'AssignmentExpression', true).str + ast.operator + wrap(minify(ast.right), 'AssignmentExpression').str,
+                    p: 'AssignmentExpression'
+                };
+            }
+        case 'DebuggerStatement':
+            {
+                return {
+                    str: "debugger;"
+                };
+            }
+        case 'EmptyStatement':
+            {
+                return {
+                    str: ";"
+                };
+            }
+        case 'BlockStatement':
+            {
+                return {
+                    str: "{" + ast.body.map(minifyToString).join("") + "}"
+                };
+            }
+        case 'IfStatement':
+            {
+                var str = "if(" + minify(ast.test).str + ")" + minify(ast.true).str;
+                if (ast.false !== undefined) {
+                    str += "else " + minify(ast.false).str;
+                }
+                return {
+                    str: str
+                };
+            }
+        case 'WithStatement':
+            {
+                return {
+                    str: "with(" + minify(ast.base).str + ")" + minify(ast.body).str
+                };
+            }
+        case 'WhileStatement':
+            {
+                return {
+                    str: "while(" + minify(ast.test).str + ")" + minify(ast.body).str
+                };
+            }
+        case 'DoStatement':
+            {
+                return {
+                    str: "do " + minify(ast.body).str + "while(" + minify(ast.test).str + ");"
+                };
+            }
+        case 'ForStatement':
+            {
+                var str = "for(";
+                if (ast.init !== undefined) {
+                    if (ast.init && ast.init.type == 'VariableDeclaration')
+                        str += minify(ast.init).str;
+                    else
+                        str += minify(ast.init).str + ";";
+                } else {
+                    str += ";";
+                }
+                if (ast.test !== undefined) str += minify(ast.test).str;
+                str += ";";
+                if (ast.inc !== undefined) str += minify(ast.inc).str;
+                str += ")" + minify(ast.body).str;
+                return {
+                    str: str
+                };
+            }
+        case 'ForInStatement':
+            {
+                var str = "for(";
+                if (ast.init && ast.init.type == 'VariableDeclarator')
+                    str += "var " + minify(ast.var);
+                else
+                    str += minify(ast.var).str;
+                return {
+                    str: str + " in " + minify(ast.container).str + ")" + minify(ast.body).str
+                };
+            }
+        case 'TryStatement':
+            {
+                var str = "try " + minify(ast.body).str;
+                if (ast.catch !== undefined) {
+                    var param = ast.parameter;
+                    if (param instanceof Object) {
+                        param = param.name;
+                    }
+                    str += "catch(" + param + ")" + minify(ast.catch).str;
+                }
+                if (ast.finally !== undefined) {
+                    str += "finally" + minify(ast.finally).str;
+                }
+                return {
+                    str: str
+                };
+            }
+        case 'SwitchStatement':
+            {
+                return {
+                    str: "switch(" + minify(ast.expression).str + "){" + ast.body.map(minifyToString).join("") + "}"
+                };
+            }
+        case 'CaseClause':
+            {
+                if (ast.key === undefined) {
+                    return {
+                        str: "default:" + ast.body.map(minifyToString).join("")
+                    };
+                } else {
+                    return {
+                        str: "case " + minify(ast.key).str + ":" + ast.body.map(minifyToString).join("")
+                    };
+                }
+            }
+        case 'ReturnStatement':
+            {
+                if (ast.expression === undefined) {
+                    return {
+                        str: "return;"
+                    };
+                } else {
+                    return {
+                        str: "return " + minify(ast.expression).str + ";",
+                    };
+                }
+            }
+        case 'ThrowStatement':
+            {
+                return {
+                    str: "throw " + minify(ast.expression).str + ";",
+                };
+            }
+        case 'BreakStatement':
+            {
+                if (ast.label === undefined) {
+                    return {
+                        str: "break;"
+                    };
+                } else {
+                    return {
+                        str: "break " + ast.label + ";",
+                    };
+                }
+            }
+        case 'ContinueStatement':
+            {
+                if (ast.label === undefined) {
+                    return {
+                        str: "continue;"
+                    };
+                } else {
+                    return {
+                        str: "continue " + ast.label + ";",
+                    };
+                }
+            }
+        case 'LabeledStatement':
+            {
+                return {
+                    str: ast.label + ":" + minify(ast.body).str
+                };
+            }
+        case 'FunctionExpression':
+        case 'FunctionDeclaration':
+            {
+                var str = "function";
+                if (ast.name) {
+                    str += " " + (ast.name instanceof Object ? ast.name.name : ast.name);
+                }
+                str += "(";
+                str += ast.parameter.map(function(a) {
+                    if (a instanceof Object) {
+                        return a.name;
+                    } else {
+                        return a;
+                    }
+                }).join(",");
+                str += "){";
+                for (var i = 0; i < ast.body.length; i++) {
+                    str += minify(ast.body[i]).str;
+                }
+                str += "}";
+                return {
+                    str: str,
+                    p: 'PrimaryExpression'
+                };
+            }
+        case 'Program':
+            {
+                var str = "";
+                for (var i = 0; i < ast.body.length; i++) {
+                    str += minify(ast.body[i]).str;
+                }
+                return {
+                    str: str
+                };
+            }
+        case 'DirectiveStatement':
+            {
+                return {
+                    str: ast.raw + ";"
+                };
+            }
+        case 'ExpressionStatement':
+            {
+                var str = minify(ast.expression).str;
+                if (typeof(ast.expression) == "string" || str.indexOf("function ") == 0 || str.indexOf("function(") == 0) {
+                    return {
+                        str: "(" + str + ");"
+                    };
+                } else {
+                    return {
+                        str: str.indexOf("function") == 0 ? "(" + str + ");" : str + ";"
+                    };
+                }
+            }
 
-        }
+        case 'VariableDeclaration':
+            {
+                var str = "var ";
+                for (var i = 0; i < ast.declarations.length; i++) {
+                    if (i != 0) {
+                        str += ",";
+                    }
+                    str += minify(ast.declarations[i]).str;
+                }
+                return {
+                    str: str + ";"
+                };
+            }
+        case 'VariableDeclarator':
+            {
+                var name = ast.name;
+                if (name instanceof Object) {
+                    name = name.name;
+                }
+                if (ast.init !== undefined) {
+                    return {
+                        str: name + '=' + wrap(minify(ast.init), 'AssignmentExpression').str
+                    };
+                } else {
+                    return {
+                        str: name
+                    };
+                }
+            }
+        default:
+            throw ast;
     }
 }
 var idStart = "_$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -892,17 +1001,6 @@ function variableName(id) {
         text += idPart[id % idPart.length];
     }
     return text;
-}
-
-function hasSideEffect(ast) {
-    if (ast instanceof Object) {
-        if (ast.type == 'EmptyStatement') {
-            return false;
-        }
-        return true;
-    } else {
-        return false;
-    }
 }
 
 function wrapWithExprStmt(ast) {
@@ -979,55 +1077,21 @@ exports.MinifyPass = {
                 }
             case 'IfStatement':
                 {
-                    /* Remove all empty statements if they occur in if or else block */
-                    if (!hasSideEffect(node.false)) {
-                        node.false = undefined;
-                    }
-                    if (!hasSideEffect(node.true)) {
-                        node.true = undefined;
-                    }
-                    /* If we removed both, we can return a sole expression statement,
-                     * or even eliminate it completely */
-                    if (node.true === undefined && node.false === undefined) {
-                        if (hasSideEffect(node.test)) {
-                            var wrap = new NorlitJSCompiler.Node('ExpressionStatement');
-                            wrap.expression = node.test;
-                            return wrap;
-                        } else {
-                            return new NorlitJSCompiler.Node('EmptyStatement');
-                        }
-                    }
-                    if (node.true === undefined) {
-                        var wrap = new NorlitJSCompiler.Node('UnaryExpression');
-                        wrap.operator = '!';
-                        wrap.operand = node.test;
-                        node.test = wrap;
-                        node.true = node.false;
-                        node.false = undefined;
-                    }
-                    if (!hasSideEffect(node.test)) {
-                        if (node.test) {
-                            return node.true;
-                        } else {
-                            return node.false === undefined ? new NorlitJSCompiler.Node('EmptyStatement') : node.false;
+                    if (node.false === undefined) {
+                        if (node.true.type == 'ExpressionStatement') {
+                            var replace = new NorlitJSCompiler.Node('BinaryExpression');
+                            replace.operator = '&&';
+                            replace.left = node.test;
+                            replace.right = node.true.expression;
+                            return wrapWithExprStmt(replace);
                         }
                     } else {
-                        if (node.false === undefined) {
-                            if (node.true.type == 'ExpressionStatement') {
-                                var replace = new NorlitJSCompiler.Node('BinaryExpression');
-                                replace.operator = '&&';
-                                replace.left = node.test;
-                                replace.right = node.true.expression;
-                                return wrapWithExprStmt(replace);
-                            }
-                        } else {
-                            if (node.true.type == 'ExpressionStatement' && node.false.type == 'ExpressionStatement') {
-                                var replace = new NorlitJSCompiler.Node('ConditionalExpression');
-                                replace.test = node.test;
-                                replace.true = node.true.expression;
-                                replace.false = node.false.expression;
-                                return wrapWithExprStmt(replace);
-                            }
+                        if (node.true.type == 'ExpressionStatement' && node.false.type == 'ExpressionStatement') {
+                            var replace = new NorlitJSCompiler.Node('ConditionalExpression');
+                            replace.test = node.test;
+                            replace.true = node.true.expression;
+                            replace.false = node.false.expression;
+                            return wrapWithExprStmt(replace);
                         }
                     }
                     break;
@@ -1209,7 +1273,7 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				case 'TryStatement':
 					{
 						if (ast.parameter !== undefined) {
-							NorlitJSCompiler.Visitor.traverse(ast.try, scopeAnalyzer);
+							NorlitJSCompiler.Visitor.traverse(ast.body, scopeAnalyzer);
 							scopeChain.push(scope);
 							scope = new CatchScope(scope, ast.parameter);
 							ast.parameter = scope.symbol;
@@ -1231,13 +1295,13 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				case 'FunctionExpression':
 				case 'FunctionDeclaration':
 					{
-						console.log('Analysis of ' + ast.type + " Yield " + JSON.stringify(scope.var));
+						//console.log('Analysis of ' + ast.type + " Yield " + JSON.stringify(scope.var));
 						scope = scopeChain.pop();
 						break;
 					}
 				case 'WithStatement':
 					{
-						console.log('Leave With Scope');
+						//console.log('Leave With Scope');
 						scope = scopeChain.pop();
 						break;
 					}
@@ -1264,7 +1328,7 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				case 'TryStatement':
 					{
 						if (ast.parameter !== undefined) {
-							NorlitJSCompiler.Visitor.traverse(ast.try, identifierResolver);
+							NorlitJSCompiler.Visitor.traverse(ast.body, identifierResolver);
 							scopeChain.push(scope);
 							scope = ast.scope;
 							NorlitJSCompiler.Visitor.traverse(ast.catch, identifierResolver);
@@ -1285,7 +1349,8 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				if (symbol) {
 					return symbol;
 				} else {
-					return global.declare(ast.name);
+					global.declare(ast.name);
+					return;
 				}
 			}
 		},
@@ -1371,8 +1436,23 @@ NorlitJSCompiler.Parser = function() {
 	function Node(type) {
 		this.type = type;
 	}
+
+	var ASTBuilder = {
+		wrapConstant: function(constant) {
+			var ret = new Node("Constant");
+			ret.value = constant;
+			ret.sideEffect = false;
+			return ret;
+		}
+	};
+
 	NorlitJSCompiler.Node = Node;
+	NorlitJSCompiler.ASTBuilder = ASTBuilder;
+
+
 	Node.ILLEGAL = new Node('<illegal>');
+	Node.EMPTY = new Node('EmptyStatement');
+	Node.EMPTY.sideEffect = false;
 
 	Node.prototype.push = function(obj) {
 		this[this.length++] = obj;
@@ -1497,18 +1577,28 @@ NorlitJSCompiler.Parser = function() {
 					return ret;
 				}
 			case 'null':
-				this.next();
-				return null;
+				{
+					this.next();
+					return ASTBuilder.wrapConstant(null);
+				}
 			case 'true':
-				this.next();
-				return true;
+				{
+					this.next();
+					return ASTBuilder.wrapConstant(true);
+				}
 			case 'false':
-				this.next();
-				return false;
+				{
+					this.next();
+					return ASTBuilder.wrapConstant(false);
+				}
 			case 'num':
-				return this.next().value;
+				{
+					return ASTBuilder.wrapConstant(this.next().value);
+				}
 			case 'str':
-				return this.next().value;
+				{
+					return ASTBuilder.wrapConstant(this.next().value);
+				}
 			case '/':
 			case '/=':
 				{
@@ -1726,7 +1816,7 @@ NorlitJSCompiler.Parser = function() {
 						this.lex.parseId = true;
 						var node = new Node('MemberExpression');
 						node.base = cur;
-						node.property = id.value;
+						node.property = ASTBuilder.wrapConstant(id.value);
 						cur = node;
 						break;
 					}
@@ -1760,7 +1850,7 @@ NorlitJSCompiler.Parser = function() {
 						id.type = 'str';
 						var node = new Node('MemberExpression');
 						node.base = cur;
-						node.property = id.value;
+						node.property = ASTBuilder.wrapConstant(id.value);
 						cur = node;
 						break;
 					}
@@ -3316,6 +3406,7 @@ NorlitJSCompiler.Lex = function() {
 }();
 },{"../compiler":1,"./chartype":5}],8:[function(require,module,exports){
 var syntax = {
+	Constant: [],
 	Identifier: [],
 	RegexpLiteral: [],
 	ThisExpression: [],
@@ -3399,6 +3490,8 @@ function traverse(ast, options, parent) {
 			}
 		}
 	} else {
+		console.log('>>>>' + ast);
+		throw 'ERROR!!!!';
 		if (options.noLiteralVisit) {
 			return;
 		}
