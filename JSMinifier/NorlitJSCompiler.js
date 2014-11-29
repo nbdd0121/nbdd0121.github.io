@@ -244,9 +244,7 @@ NorlitJSCompiler.ASTPass.register({
 								}
 							case 'void':
 								{
-									node.operand = ASTBuilder.wrapConstant(0);
-									node.sideEffect = false;
-									return node;
+									return ASTBuilder.wrapConstant(undefined);
 								}
 						}
 					}
@@ -302,7 +300,20 @@ NorlitJSCompiler.ASTPass.register({
 },{"./compiler":1}],3:[function(require,module,exports){
 var NorlitJSCompiler = require("../compiler");
 
-function minifyNumber(num) {
+var minifyNumber = function() {
+    function pickAlternative(array) {
+        var minLength = Number.MAX_VALUE;
+        var minA = null;
+        for (var i = 0; i < array.length; i++) {
+            var a = array[i];
+            var heuristicLength = a.str.length + precedent.indexOf(a.p) / precedent.length * 2;
+            if (heuristicLength < minLength) {
+                minLength = heuristicLength;
+                minA = a;
+            }
+        }
+        return minA;
+    }
 
     function fraction(x) {
         var abs = Math.abs(x);
@@ -319,26 +330,42 @@ function minifyNumber(num) {
         if (sign * fraction[0] / fraction[1] != x) {
             return null;
         }
-        return (sign == -1 ? '-' : '') + fraction[0] + "/" + fraction[1];
-    }
-
-    var nstr = num.toString();
-    if (Math.floor(num) == num) {
         return {
-            str: nstr,
-            p: num < 0 ? 'UnaryExpression' : 'PrimaryExpression'
-        };
-    } else {
-        var fracStr = fraction(num);
-        return !fracStr || fracStr.length + 1 >= nstr.length ? {
-            str: nstr,
-            p: num < 0 ? 'UnaryExpression' : 'PrimaryExpression'
-        } : {
-            str: fracStr,
+            str: (sign == -1 ? '-' : '') + fraction[0] + "/" + fraction[1],
             p: '*'
         };
     }
-}
+
+    return function(num) {
+        var p = num < 0 ? "UnaryExpression" : "PrimaryExpression";
+        var alternatives = [];
+        alternatives.push({
+            str: function() {
+                var str = num.toString().replace("e+", "e");
+                if (str[0] == '0' && str[1] == '.') {
+                    str = str.substr(1);
+                }
+                return str;
+            }(),
+            p: p
+        });
+        if (parseInt(num) == num) {
+            alternatives.push({
+                str: "0x" + num.toString(16).toUpperCase(),
+                p: p
+            });
+        }
+        alternatives.push({
+            str: num.toExponential().replace("e+", "e"),
+            p: p
+        });
+        var f = fraction(num);
+        if (f) {
+            alternatives.push(f);
+        }
+        return pickAlternative(alternatives);
+    }
+}();
 
 function minifyString(str) {
     var single = "'";
@@ -478,6 +505,17 @@ function wrap(obj, p, ns) {
     return obj;
 }
 
+function eliminateSemicolon(inBlock) {
+    if (inBlock[inBlock.length - 1] == ';') {
+        return inBlock.substr(0, inBlock.length - 1);
+    }
+    return inBlock;
+}
+
+function generateStmtArray(array) {
+    return array.map(minifyToString).join("");
+}
+
 function minifyToString(ast) {
     return minify(ast).str;
 }
@@ -501,6 +539,11 @@ function minify(ast) {
                             str: '!' + Number(!ast.value),
                             p: "UnaryExpression"
                         }
+                    case 'undefined':
+                        return {
+                            str: 'void 0',
+                            p: 'UnaryExpression'
+                        };
                     default:
                         return {
                             str: ast.value + "",
@@ -545,7 +588,7 @@ function minify(ast) {
             }
         case 'Property':
             {
-                var name = (isIdentifierName(ast.key) || +name + "" == name) ? ast.key : minifyString(ast.key).str;
+                var name = (isIdentifierName(ast.key) || +ast.key + "" == ast.key) ? ast.key : minifyString(ast.key).str;
                 return {
                     str: name + ":" + wrap(minify(ast.value), 'AssignmentExpression').str
                 };
@@ -553,9 +596,7 @@ function minify(ast) {
         case 'Getter':
             {
                 var str = "get " + ast.key + "(){"
-                for (var i = 0; i < ast.body.length; i++) {
-                    str += minify(ast.body[i]).str;
-                }
+                str += eliminateSemicolon(generateStmtArray(ast.body));
                 str += "}";
                 return {
                     str: str,
@@ -564,9 +605,7 @@ function minify(ast) {
         case 'Setter':
             {
                 var str = "set " + ast.key + "(" + ast.parameter + "){"
-                for (var i = 0; i < ast.body.length; i++) {
-                    str += minify(ast.body[i]).str;
-                }
+                str += eliminateSemicolon(generateStmtArray(ast.body));
                 str += "}";
                 return {
                     str: str,
@@ -759,7 +798,7 @@ function minify(ast) {
         case 'BlockStatement':
             {
                 return {
-                    str: "{" + ast.body.map(minifyToString).join("") + "}"
+                    str: "{" + eliminateSemicolon(generateStmtArray(ast.body)) + "}"
                 };
             }
         case 'IfStatement':
@@ -812,8 +851,8 @@ function minify(ast) {
         case 'ForInStatement':
             {
                 var str = "for(";
-                if (ast.init && ast.init.type == 'VariableDeclarator')
-                    str += "var " + minify(ast.var);
+                if (ast.var && ast.var.type == 'VariableDeclarator')
+                    str += "var " + minify(ast.var).str;
                 else
                     str += minify(ast.var).str;
                 return {
@@ -840,7 +879,8 @@ function minify(ast) {
         case 'SwitchStatement':
             {
                 return {
-                    str: "switch(" + minify(ast.expression).str + "){" + ast.body.map(minifyToString).join("") + "}"
+                    str: "switch(" + minify(ast.expression).str + "){" +
+                        eliminateSemicolon(generateStmtArray(ast.body)) + "}"
                 };
             }
         case 'CaseClause':
@@ -919,9 +959,7 @@ function minify(ast) {
                     }
                 }).join(",");
                 str += "){";
-                for (var i = 0; i < ast.body.length; i++) {
-                    str += minify(ast.body[i]).str;
-                }
+                str += eliminateSemicolon(generateStmtArray(ast.body));
                 str += "}";
                 return {
                     str: str,
@@ -1142,6 +1180,8 @@ exports.minify = minify;
 },{"../compiler":1}],4:[function(require,module,exports){
 var NorlitJSCompiler = require("./compiler");
 
+var ASTBuilder = NorlitJSCompiler.ASTBuilder;
+
 NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 	function Symbol(name) {
 		this.name = name;
@@ -1166,7 +1206,13 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 		this.symbol = new Symbol(param);
 	}
 
-	DeclScope.prototype.declare = function(name) {
+	function GlobalScope() {
+		this.optimize = false;
+		this.outer = null;
+		this.var = [];
+	}
+
+	DeclScope.prototype.declare = GlobalScope.prototype.declare = function(name) {
 		for (var i = 0; i < this.var.length; i++) {
 			if (this.var[i].name == name) {
 				return this.var[i];
@@ -1183,7 +1229,7 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				return this.var[i];
 			}
 		}
-		return this.outer ? this.outer.resolve(name) : null;
+		return this.outer.resolve(name);
 	}
 
 	WithScope.prototype.declare = function(name) {
@@ -1205,17 +1251,25 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 		return this.outer.resolve(name);
 	}
 
-	DeclScope.prototype.disableOptimize = WithScope.prototype.disableOptimize = CatchScope.prototype.disableOptimize = function() {
-		if (this.optimize) {
-			this.optimize = false;
-			if (this.outer)
-				this.outer.disableOptimize();
-		}
+	GlobalScope.prototype.resolve = function(name) {
+		return undefined;
 	}
 
+	DeclScope.prototype.disableOptimize =
+		WithScope.prototype.disableOptimize =
+		CatchScope.prototype.disableOptimize =
+		GlobalScope.prototype.disableOptimize = function() {
+			if (this.optimize) {
+				this.optimize = false;
+				if (this.outer)
+					this.outer.disableOptimize();
+			}
+		}
+
+
+
 	var scopeChain = [];
-	var global = new DeclScope(scope);
-	global.disableOptimize();
+	var global = new GlobalScope();
 	var scope = global;
 
 	var scopeAnalyzer = {
@@ -1352,6 +1406,11 @@ NorlitJSCompiler.ScopeAnalysis = function ScopeAnalysis(ast) {
 				if (symbol) {
 					return symbol;
 				} else {
+					if (symbol === undefined) {
+						if (ast.name == 'undefined') {
+							return ASTBuilder.wrapConstant(undefined);
+						}
+					}
 					global.declare(ast.name);
 					return;
 				}
@@ -3521,9 +3580,11 @@ exports.traverse = function(ast, options) {
 	traverse(ast, options);
 }
 },{}],9:[function(require,module,exports){
-window.NorlitJSCompiler = require("./compiler.js");
+(function (global){
+global.NorlitJSCompiler = require("./compiler.js");
 var minify = require("./module/minify");
 require("./scope.js");
-window.NorlitJSCompiler.minify = minify.minify;
-window.NorlitJSCompiler.MinifyPass = minify.MinifyPass;
+global.NorlitJSCompiler.minify = minify.minify;
+global.NorlitJSCompiler.MinifyPass = minify.MinifyPass;
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./compiler.js":1,"./module/minify":3,"./scope.js":4}]},{},[9]);

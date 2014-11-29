@@ -136,7 +136,9 @@
 			ast = NorlitJSCompiler.ASTPass.apply(ast, NorlitJSCompiler.MinifyPass);
 			var str = NorlitJSCompiler.minify(ast).str;
 			$('#text').orion('text', str);
-			$('.x-statusbar').text("Minified without errors. Compressed from "+text.length+" bytes to "+str.length+" bytes");
+			$('.x-statusbar').text("Minified without errors. "+
+				"Compressed from "+text.length+" bytes to "+str.length+" bytes, "+
+				"saved "+((text.length-str.length)/text.length*100 || 0).toFixed(2)+"%");
 		}else{
 			displayInfo(context);
 			$('.x-statusbar').text(
