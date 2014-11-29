@@ -161,10 +161,18 @@
 	}
 
 	function saveFile(){
-		$('<a>')
-			.attr('href', 'data:application/octetstream;base64,'+btoa($("#text").orion('text')))
-			.attr('download', Options.defaultFileName)
-			[0].click();
+		if(typeof Blob!=='undefined'){
+			var blob=new Blob([$("#text").orion('text')]);
+			$('<a>')
+				.attr('href', URL.createObjectURL(blob))
+				.attr('download', Options.defaultFileName)
+				[0].click();
+		}else{
+			$('<a>')
+				.attr('href', 'data:application/octetstream;base64,'+btoa($("#text").orion('text')))
+				.attr('download', Options.defaultFileName)
+				[0].click();
+		}
 	}
 
 </script>
