@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<title>JS Minifier</title>
 <link rel="stylesheet" type="text/css" href="../libs/orion/built-editor.css"/>
 <link rel="stylesheet" type="text/css" href="../libs/ribbon/ribbon.css"/>
 <script src="../NorlitJSCompiler/NorlitJSCompiler.js"></script>
@@ -134,6 +135,8 @@
 			NorlitJSCompiler.ScopeAnalysis(ast);
 			ast = NorlitJSCompiler.ASTPass.applyAll(ast);
 			ast = NorlitJSCompiler.ASTPass.apply(ast, NorlitJSCompiler.MinifyPass);
+			NorlitJSCompiler.Scope.Obfuscate(ast);
+			NorlitJSCompiler.Scope.Desymbolize(ast);
 			var str = NorlitJSCompiler.minify(ast).str;
 			$('#text').orion('text', str);
 			$('.x-statusbar').text("Minified without errors. "+
