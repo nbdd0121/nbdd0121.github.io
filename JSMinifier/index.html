@@ -133,6 +133,7 @@
 		}
 		if(!context.hasError()){
 			NorlitJSCompiler.ScopeAnalysis(ast);
+			NorlitJSCompiler.Pass.MoveVar(ast);
 			ast = NorlitJSCompiler.ASTPass.applyAll(ast);
 			ast = NorlitJSCompiler.ASTPass.apply(ast, NorlitJSCompiler.MinifyPass);
 			NorlitJSCompiler.Scope.Obfuscate(ast);
