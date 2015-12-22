@@ -45,7 +45,11 @@
     lib.puts('Undergraduate [ONGOING]: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a>\n\n');
     lib.puts('<b>== Computer Science Skills ==</b>\n');
     lib.puts('  C/C++ Programming Language[========= ]\n  Java Programming Language [========= ]\n  Web Development           [========  ]\n  Data Structure            [=======   ]\n  Compiling Theory          [=====     ]\n  Operating System Theory   [=======   ]\n  Artificial Intelligence   [==        ]\n  Linux and Unix            [====      ]\n');
-    lib.puts("I like reading specifications and reinventing wheels. I've read the specification of C11 thoroughly. I like using HTML + JavaScript to construct applications.\n\n");
+    lib.puts('<b>== What I like ==<b>\n')
+    lib.puts('  * Reading specifications (ex. C11 specification)\n');
+    lib.puts('  * Reinventing wheels (see my projects)\n');
+    lib.puts('  * Compiler theories and operating system theories\n');
+    lib.puts('  * Code using <del>JavaScript</del> ECMAScript (I like to use HTML + JavaScript to construcct web applications instead of native apps)\n');
 
     lib.puts('<b>== My Projects ==</b>\n');
     for (var i = 0; i < projects.length; i++) {
