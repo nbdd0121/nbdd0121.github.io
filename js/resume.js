@@ -44,7 +44,7 @@
     lib.puts('High school: <a href="http://www.nwgjb.com/en/index.aspx" target="_blank">Ningbo Foreign Language School</a>\n');
     lib.puts('Undergraduate [ONGOING]: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a>\n\n');
     lib.puts('<b>== Computer Science Skills ==</b>\n');
-    lib.puts('C/C++ Programming Language    [========= ]\n  Java Programming Language [========= ]\n  Web Design                [========  ]\n  Data Structure            [=======   ]\n  Compiling Theory          [=====     ]\n  Operating System Theory   [=======   ]\n  Artificial Intelligence   [==        ]\n  Linux and Unix            [====      ]\n');
+    lib.puts('  C/C++ Programming Language[========= ]\n  Java Programming Language [========= ]\n  Web Development           [========  ]\n  Data Structure            [=======   ]\n  Compiling Theory          [=====     ]\n  Operating System Theory   [=======   ]\n  Artificial Intelligence   [==        ]\n  Linux and Unix            [====      ]\n');
     lib.puts("I like reading specifications and reinventing wheels. I've read the specification of C11 thoroughly. I like using HTML + JavaScript to construct applications.\n\n");
 
     lib.puts('<b>== My Projects ==</b>\n');
@@ -61,8 +61,8 @@
     }
 
     lib.puts('\n<b>== Side Links ==</b>\n');
-    lib.puts('<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of tis site.\n');
-    lib.puts('<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. Now longer updated.\n');
+    lib.puts('<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of this site.\n');
+    lib.puts('<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. No longer updated.\n');
     lib.puts('<a href="http://nbdd0121.github.io">My Github Pages</a> It is this site!\n');
     lib.puts('\033[0m');
     callback();
