@@ -45,7 +45,7 @@
     lib.puts('Undergraduate [ONGOING]: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a>\n\n');
     lib.puts('<b>== Computer Science Skills ==</b>\n');
     lib.puts('  C/C++ Programming Language[========= ]\n  Java Programming Language [========= ]\n  Web Development           [========  ]\n  Data Structure            [=======   ]\n  Compiling Theory          [=====     ]\n  Operating System Theory   [=======   ]\n  Artificial Intelligence   [==        ]\n  Linux and Unix            [====      ]\n');
-    lib.puts('<b>== What I like ==<b>\n')
+    lib.puts('<b>== What I like to do ==<b>\n')
     lib.puts('  * Reading specifications (ex. C11 specification)\n');
     lib.puts('  * Reinventing wheels (see my projects)\n');
     lib.puts('  * Compiler theories and operating system theories\n');
