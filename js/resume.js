@@ -28,8 +28,10 @@
     ["", 'Creepy2048', '2048 with AI and with different difficulties'],
     'Scratch Works', ["", 'make.js', 'Makefile substitute written using Node.js'],
     ['', 'JS-Text-Preprocessor', 'JavaScript-powered servlet page'],
-    ['', 'Norlit-IDE', 'A node-webkit & ace powered editor']
-
+    ['', 'Norlit-IDE', 'A node-webkit & ace powered editor'],
+    'MediaWiki Extensions', ['https://github.com/nbdd0121/MW-FlowThread', 'FlowThread', 'Comment posting extension for MediaWiki'],
+    ['https://github.com/nbdd0121/MW-Avatar', 'Avatar', 'Avatar system that allows client-side avatar resampling & clipping'],
+    ['https://github.com/nbdd0121/MW-PageRating', 'PageRating', 'Simple rating widget that allows you to rate a page using 1-5 stars'],
   ];
 
   var guide = function(lib, args, callback) {
