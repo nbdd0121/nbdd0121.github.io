@@ -69,7 +69,7 @@
     lib.puts('\n<b>== Side Links ==</b>\n');
     lib.puts('<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of this site.\n');
     lib.puts('<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. No longer updated.\n');
-    lib.puts('<a href="http://nbdd0121.github.io">My Github Pages</a> It is this site!\n');
+    lib.puts('<a href="http://www.nbdd0121.com">My Personal Website</a> It is this site!\n');
     lib.puts('\033[0m');
     callback();
   }
