@@ -35,7 +35,9 @@
   ];
 
   var guide = function(lib, args, callback) {
-	var p = lib.puts.bind(lib);
+    var p = lib.puts.bind(lib);
+
+    var verbose = args[1] == '--verbose';
 
     p('\033[2m');
     p('<b>== Personal Information ==</b>\n');
@@ -55,19 +57,27 @@
     p('  lowRISC is an open source project aiming to create a fully open-sourced, Linux-capable, RISC-V-based SoC. The internship focuses on extending the SoC based on current design. We have implemented VGA output and a custom stream-based accelerator.\n');
 
     p('\n<b>== Voluntary Work ==</b>\n');
-    p('<b>High school:</b>\n');
-    p('  Technical Director, Model United Nations Society (2013-2014)\n');
-    p('<b>University:</b>\n');
+
+    if (verbose) {
+      p('<b>High school:</b>\n');
+      p('  Technical Director, Model United Nations Society (2013-2014)\n');
+      p('<b>University:</b>\n');
+    }
+
     p('  Webmaster, Peterhouse JCR (2016)\n');
     p('  IT Officer, Cambridge University Chinese Culture Society (2016)\n');
 
     p('\n<b>== Awards ==</b>\n');
-    p('<b>High school:</b>\n');
-    p('  Euclid Mathematics Contest 2013: Rank #6, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2013/2013EuclidResults.pdf">REF</a>]\n');
-    p('  Euclid Mathematics Contest 2014: Rank #15, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2014/2014EuclidResults.pdf">REF</a>]\n');
-    p('  Stanford Math Tournamant China 2014: Power Round Bronze Metal, Team Round #6, Overall Team #10. [<a href="http://sumo.stanford.edu/smt/2014-china/results.html">REF</a>]\n');
-    p('  Wuxi National Model United Nations 2013: Outstanding Delegate.\n');
-    p('<b>University:</b>\n');
+
+    if (verbose) {
+      p('<b>High school:</b>\n');
+      p('  Euclid Mathematics Contest 2013: Rank #6, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2013/2013EuclidResults.pdf">REF</a>]\n');
+      p('  Euclid Mathematics Contest 2014: Rank #15, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2014/2014EuclidResults.pdf">REF</a>]\n');
+      p('  Stanford Math Tournamant China 2014: Power Round Bronze Metal, Team Round #6, Overall Team #10. [<a href="http://sumo.stanford.edu/smt/2014-china/results.html">REF</a>]\n');
+      p('  Wuxi National Model United Nations 2013: Outstanding Delegate.\n');
+      p('<b>University:</b>\n');
+    }
+
     p('  Bloomberg Codecon 2015: UK Final\n');
     p('  G-Research Prize for Best Part IA Student. [<a href="https://www.cl.cam.ac.uk/supporters-club/studentprizes/">DESC</a>, <a href="http://www.cl.cam.ac.uk/downloads/ring/ring-2016-09.pdf">REF</a>]\n');
 
@@ -101,10 +111,14 @@
       p('&nbsp;&nbsp;<a href="' + item[0] + '" target="_blank">' + item[1] + '</a> ' + item[2] + '\n');
     }
 
-    p('\n<b>== Side Links ==</b>\n');
-    p('<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of this site.\n');
-    p('<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. No longer updated.\n');
-    p('<a href="http://www.nbdd0121.com">My Personal Website</a> It is this site!\n');
+    if (verbose) {
+      p('\n<b>== Side Links ==</b>\n');
+      p('<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of this site.\n');
+      p('<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. No longer updated.\n');
+    } else {
+      p('\nMy high school experiences are hidden by default. To see these, execute with arguemnt --verbose.\n');
+    }
+
     p('\033[0m');
     callback();
   }
