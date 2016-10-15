@@ -18,7 +18,7 @@ input::-ms-clear{
 p{
 	margin:0px;
 	line-height:24px;
-	white-space: pre;
+	white-space: pre-wrap;
 }
 #inputbox{
 	outline: none;
