@@ -1,14 +1,4 @@
 (function(VFS, wrapCLib) {
-  var guide = function(lib, args, callback) {
-    lib.puts("Welcome to Gary's Personal Home Page.\n");
-    lib.puts("This homepage is a simulation of Unix terminal. You may use a command by typing it and hit enter.\n");
-    lib.puts("If you just want to see my resume, simply use command 'me'\n");
-    callback();
-  }
-  VFS.open("/home/guide", true).write(wrapCLib(guide));
-})(VFS, wrapCLib);
-
-(function(VFS, wrapCLib) {
   var projects = [
     'Stable Projects', ["", 'Encoding', 'A whatwg encoding specification conformant encoding library in Javascript'],
     ["", 'norlit-libc', 'A C11 specification conformant library implementation from scratch'],
