@@ -17,6 +17,7 @@ VFS.open("/bin/pwd", true).write(function(env, args, callback){
 });
 
 VFS.open("/bin/cat", true).write(wrapCLib(function(lib, args, callback){
+  if (args.length < 2) args[1] = '/dev/stdin';
   var current=lib.fopen(args[1]);
   if(current == null){
     lib.puts("cat: " + args[1] + ": No such file or directory\n");
