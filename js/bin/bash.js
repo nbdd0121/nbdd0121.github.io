@@ -72,7 +72,6 @@
           i--;
         }
       }
-      console.log(args);
       if(args.length == 0){
         readAndExec();
         return;

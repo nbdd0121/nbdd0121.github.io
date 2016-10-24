@@ -7,7 +7,6 @@ body{
 	font-size: 17px;
 	font-family: Consolas, Courier, monospace;
 	margin:20px;
-	/*font-weight:bold;*/
 }
 
 /* in IE, a stupid clear button is displayed */
@@ -17,14 +16,14 @@ input::-ms-clear{
 
 p{
 	margin:0px;
-	line-height:24px;
+	line-height:1.4em;
 	white-space: pre-wrap;
 }
 #inputbox{
 	outline: none;
 	border: none;
 	margin: 0px;
-	font-size: 17px;
+	font-size: 1em;
 	font-family: Consolas, Courier, monospace;
 	padding: 0;
 	/*font-weight:bold;*/
@@ -86,4 +85,40 @@ a:visited{
 }
 .color47{
 	background-color:#EEEB82;
+}
+
+/* The following allows margins to be black when printing */
+@page {
+	size: A4;
+	/* you can also specify margins here: */
+	margin: 19mm;
+	margin-right: 45mm; /* for compatibility with both A4 and Letter */
+}
+
+@media print {
+	body {
+		font-size: 12px;
+		background: white;
+	}
+
+	.colorDefault{
+		color:black;
+		background-color:white;
+	}
+
+	.page-break {
+		display: block;
+		page-break-after: always;
+	}
+
+	#inputbox {
+		display: none;
+	}
+
+	a:link{
+		color:darkblue;
+	}
+	a:visited{
+		color:darkblue;
+	}
 }
