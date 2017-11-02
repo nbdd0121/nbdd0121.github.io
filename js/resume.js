@@ -33,12 +33,13 @@
     p('<b>== Personal Information ==</b>\n');
     p('Name: Xuan Guo, aka Gary\n');
     p('Date of Birth: Jan 21st, 1998\n');
-    p('Email: <a href="mailto:nbdd0121@hotmail.com">nbdd0121@hotmail.com</a>\n');
+    p('Email: <gary@garyguo.net>gary@garyguo.net</a>\n');
     p('GitHub: <a href="https://github.com/nbdd0121/" target="_blank">@nbdd0121</a>\n');
-    p('Website: <a href="https://www.nbdd0121.com/" target="_blank">www.nbdd0121.com</a>\n')
+    p('Website: <a href="https://garyguo.net/" target="_blank">garyguo.net</a>\n')
 
     p('\n<b>== Education ==</b>\n');
     p('Undergraduate: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a> (2015-2018)\n');
+    p('  Part IB Tripos: 1st Class Honor\n');
     p('  Part IA Tripos: 1st Class Honor\n');
     p('High school: <a href="http://www.nwgjb.com/en/index.aspx" target="_blank">Ningbo Foreign Language School</a> (2012-2015)\n');
 
@@ -64,9 +65,8 @@
       p('<b>University:</b>\n');
     }
 
-    p('  Bloomberg Codecon 2015: UK Final\n');
+    p('  BCS Award for an Outstanding Second Year Student\n');
     p('  G-Research Prize for the Best Part IA Student\n');
-    p('    Annual award to the student who achieve best score in Part IA Tripos.\n');
 
     p('\n<b>== Working Experience ==</b>\n');
     p('Software Developer Intern, Best Internet Technology CO., LTD (2013 Summer)\n');

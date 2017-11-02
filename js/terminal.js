@@ -52,7 +52,7 @@ $(window)
 
           var stdout=VFS.open("/dev/stdout");
           stdout
-              .write("Gary Guo <nbdd0121@hotmail.com>\nCopyright (c) 2014 - 2016, Gary Guo. All rights reserved.\n");
+              .write("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2017, Gary Guo. All rights reserved.\n");
           function createBash(){
             VFS
                 .open("/bin/bash")
