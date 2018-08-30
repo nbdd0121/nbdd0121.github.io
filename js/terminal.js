@@ -1,13 +1,7 @@
 VFS.lookup("/home/", true);
 
-$(window).load(function(){
-  $("html").click(function(){
-    $("#inputbox").focus();
-  });
-});
-
 VFS.open("/bin/clear", true).write(function(env, args, callback){
-  $("body").html("<p>");
+  document.body.innerHTML = '<p></p>';
   callback();
 });
 
@@ -41,29 +35,32 @@ VFS.open("/bin/cat", true).write(wrapCLib(function(lib, args, callback){
   }
 }));
 
-$(window)
-    .load(
-        function(){
-          var env={
-            PATH:"/bin/;.",
-            HOME:"/home/",
-            WORKING_DIRECTORY:"/home/"
-          };
+window.addEventListener('load', function() {
+  document.documentElement.addEventListener('keydown', function(){
+    document.querySelector("#inputbox").focus();
+  });
 
-          var stdout=VFS.open("/dev/stdout");
-          stdout
-              .write("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2017, Gary Guo. All rights reserved.\n");
-          function createBash(){
-            VFS
-                .open("/bin/bash")
-                .exec(
-                    env,
-                    ["/bin/bash"],
-                    function(){
-                      stdout
-                          .write("Permission Denied: You cannot exit this session.\n");
-                      createBash();
-                    });
-          }
-          createBash();
-        });
+  var env={
+    PATH:"/bin/;.",
+    HOME:"/home/",
+    WORKING_DIRECTORY:"/home/"
+  };
+
+  var stdout=VFS.open("/dev/stdout");
+  stdout
+      .write("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+  function createBash(){
+    VFS
+        .open("/bin/bash")
+        .exec(
+            env,
+            ["/bin/bash"],
+            function(){
+              window.close();
+              stdout
+                  .write("Permission Denied: You browser does not allow the window to be closed.\n");
+              createBash();
+            });
+  }
+  createBash();
+});

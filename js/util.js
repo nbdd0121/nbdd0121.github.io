@@ -21,7 +21,3 @@ String.prototype.common=function common(str){
   }
   return str.substr(0, len);
 }
-
-function clone(f){
-  return jQuery.extend({}, f);
-}

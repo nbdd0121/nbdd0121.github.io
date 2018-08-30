@@ -41,7 +41,7 @@
   }
   FileDesc.prototype.exec=function exec(env, args, callback){
     if(this.node.data instanceof Function){
-      this.node.data(clone(env), args, callback);
+      this.node.data(Object.assign({}, env), args, callback);
       return this;
     }
     throw "Unsupported Operation";

@@ -117,19 +117,19 @@
           return;
         }
         if(id == history.length){
-          inputBackup=element.val();
+          inputBackup=element.value;
         }
         id--;
-        element.val(history[id]);
+        element.value = history[id];
       }else if(key == "down"){
         if(id == history.length){
           return;
         }
         id++;
         if(id == history.length){
-          element.val(inputBackup);
+          element.value = inputBackup;
         }else{
-          element.val(history[id]);
+          element.value = history[id];
         }
       }else{
         specKey&&specKey(key, element);

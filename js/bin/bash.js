@@ -95,7 +95,7 @@
       }, function(key, element){
         if(key != "tab")
           return;
-        var currentInput=element.val();
+        var currentInput=element.value;
         if(currentInput == "")
           return;
         var currentArgIndex=currentInput.lastIndexOf(" ") + 1;
@@ -103,7 +103,7 @@
           var pc=getAllPossibleChoices(env.PATH.split(";"), currentInput);
           if(pc.length == 0){
           }else if(pc.length == 1){
-            element.val(pc[0]);
+            element.value = pc[0];
           }else{
             var ext=extractCommon(pc);
             if(ext == currentInput){
@@ -119,9 +119,9 @@
               }
               lib.puts("\n");
               readAndExec();
-              $("#inputbox").val(currentInput);
+              document.querySelector("#inputbox").value = currentInput;
             }else{
-              element.val(ext);
+              element.value = ext;
             }
           }
         }else{
@@ -133,7 +133,7 @@
           var pc=getAllPossibleChoices([path], file);
           if(pc.length == 0){
           }else if(pc.length == 1){
-            element.val(prefix + path + pc[0]);
+            element.value = prefix + path + pc[0];
           }else{
             var ext=extractCommon(pc);
             if(ext == file){
@@ -149,9 +149,9 @@
               }
               lib.puts("\n");
               readAndExec();
-              $("#inputbox").val(currentInput);
+              document.querySelector("#inputbox").value = currentInput;
             }else{
-              element.val(prefix + path + ext);
+              element.value = prefix + path + ext;
             }
           }
         }

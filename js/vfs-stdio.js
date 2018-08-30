@@ -1,4 +1,4 @@
-(function(VFS, $){
+(function(VFS){
   var color="colorDefault";
   var encode=true;
   function parseConfigEscape(seq){
@@ -26,31 +26,33 @@
     var seq=str.split("\033[");
     var ret;
     if(seq[0]){
-      ret=$('<span class="'+color+'">');
-      ret.html(encode?encodeHtml(seq[0]):seq[0]);
+      ret = [document.createElement('span')];
+      ret[0].className = color;
+      ret[0].innerHTML = encode?encodeHtml(seq[0]):seq[0];
     }else{
-      ret=$();
+      ret = [];
     }
     for(var seqNum=1; seqNum<seq.length; seqNum++){
       var txt=seq[seqNum];
       var realTextBegin=txt.indexOf("m");
       parseConfigEscape(txt.substr(0, realTextBegin));
-      var jq=$('<span class="'+color+'">');
-      jq.html(encode?encodeHtml(txt.substr(realTextBegin+1)):txt.substr(realTextBegin+1));
-      ret=ret.add(jq);
+      var element = document.createElement('span');
+      element.className = color;
+      element.innerHTML = encode?encodeHtml(txt.substr(realTextBegin+1)):txt.substr(realTextBegin+1);
+      ret.push(element);
     }
     return ret;
   }
   function appendString(str){
     var datas=str.split("\n");
-    $("p:last").append(genSingleLineCode(datas[0]));
+    document.querySelector("p:last-child").append(...genSingleLineCode(datas[0]));
     for(var lineNum=1; lineNum<datas.length; lineNum++){
       var line=datas[lineNum];
-      var prevp=$("p:last");
-      if(prevp.text()=="")
-        prevp.html("&nbsp;");
-      $("body").append("<p>");
-      $("p:last").append(genSingleLineCode(line));
+      var prevp=document.querySelector("p:last-child");
+      if(prevp.textContent=="")
+        prevp.innerHTML = "&nbsp;";
+      document.body.append(document.createElement('p'));
+      document.querySelector("p:last-child").append(...genSingleLineCode(line));
     }
   }
   
@@ -69,23 +71,25 @@
     return {
       readLine:function readLine(callback, funckey){
         function adjustWidth(input){
-          input.width($("body").width()-input.offset().left);
+          input.style.width = document.body.clientWidth - input.offsetLeft + 'px';
         }
-        var input=$('<input id="inputbox" class="'+color
-            +'" spellcheck=false />');
-        $("p:last-child").append(input);
+        var input=document.createElement('input');
+        input.id = 'inputbox';
+        input.className = color;
+        input.spellcheck = false;
+        document.querySelector("p:last-child").append(input);
         adjustWidth(input);
         input.focus();
-        input.keypress(function(e){
+        input.addEventListener('keypress', function(e){
           if(e.which==13){
             input.remove();
-            appendString(input.val()+"\n");
-            callback(input.val());
+            appendString(input.value+"\n");
+            callback(input.value);
           }else if(e.which==9){
             e.preventDefault();
           }
         });
-        input.keydown(function(e){
+        input.addEventListener('keydown', function(e){
           var key;
           switch(e.which){
             case 38:
@@ -112,4 +116,4 @@
     };
 
   }
-})(VFS, jQuery);
+})(VFS);
