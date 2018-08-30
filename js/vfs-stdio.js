@@ -43,16 +43,20 @@
     }
     return ret;
   }
+  function lastP() {
+    let ps = document.querySelectorAll('p');
+    return ps[ps.length - 1];
+  }
   function appendString(str){
     var datas=str.split("\n");
-    document.querySelector("p:last-child").append(...genSingleLineCode(datas[0]));
+    lastP().append(...genSingleLineCode(datas[0]));
     for(var lineNum=1; lineNum<datas.length; lineNum++){
       var line=datas[lineNum];
-      var prevp=document.querySelector("p:last-child");
+      var prevp=lastP();
       if(prevp.textContent=="")
         prevp.innerHTML = "&nbsp;";
       document.body.append(document.createElement('p'));
-      document.querySelector("p:last-child").append(...genSingleLineCode(line));
+      lastP().append(...genSingleLineCode(line));
     }
   }
   
@@ -77,7 +81,7 @@
         input.id = 'inputbox';
         input.className = color;
         input.spellcheck = false;
-        document.querySelector("p:last-child").append(input);
+        lastP().append(input);
         adjustWidth(input);
         input.focus();
         input.addEventListener('keypress', function(e){
