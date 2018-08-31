@@ -1,117 +1,122 @@
 (function(window){
   var VFS={};
-  function FileNode(parent, name, type){
-    this.parent=parent;
-    parent.data["/" + name]=this;
-    this.path=parent.path + "/" + name;
-    this.name=name;
-    this.type=type;
-    if(type == "dir"){
-      this.data={};
+  class FileNode {
+    constructor(parent, name, type) {
+      this.parent = parent;
+      parent.data["/" + name] = this;
+      this.path = parent.path + "/" + name;
+      this.name = name;
+      this.type = type;
+      if (type == "dir") {
+        this.data = {};
+      }
+    }
+    contains(name) {
+      if (this.data["/" + name])
+        return true;
+      return false;
+    }
+    get(name) {
+      return this.data["/" + name];
+    }
+    open() {
+      return new FileDesc(this);
     }
   }
-  function FileDesc(node){
-    this.node=node;
-    this.ptr=0;
-  }
+  class FileDesc {
+    constructor(node) {
+      this.node = node;
+      this.ptr = 0;
+    }
 
-  FileNode.prototype.contains=function contains(name){
-    if(this.data["/" + name])
-      return true;
-    return false;
-  };
-  FileNode.prototype.get=function get(name){
-    return this.data["/" + name];
-  };
-  FileNode.prototype.open=function open(){
-    return new FileDesc(this);
-  };
-  FileDesc.prototype={
     /* Type Information */
-    isDirectory:function isDirectory(){
+    isDirectory(){
       return this.node.type == "dir";
-    },
+    }
+
     /* Permission Information */
-    canExec:function canExec(){
+    canExec(){
       return this.node.data instanceof Function;
-    },
-    canRead:function canRead(){
+    }
+
+    canRead(){
       return typeof (this.node.data) == "string";
     }
-  }
-  FileDesc.prototype.exec=function exec(env, args, callback){
-    if(this.node.data instanceof Function){
-      this.node.data(Object.assign({}, env), args, callback);
-      return this;
-    }
-    throw "Unsupported Operation";
-  };
-  FileDesc.prototype.write=function write(str){
-    if(this.node.data == null){
-      this.node.data=str;
-      return this;
-    }
-    if(typeof (this.node.data) == "string"){
-      this.node.data+=str;
-      return this;
-    }
-    throw "Unsupported Operation";
-  };
-  FileDesc.prototype.read=function read(callback){
-    if(typeof (this.node.data) == "string"){
-      if(this.ptr == this.node.data.length)
-        return null;
-      var ret=this.node.data[this.ptr];
-      this.ptr++;
-      callback(ret);
-    }else{
+
+    exec(env, args, callback) {
+      if (this.node.data instanceof Function) {
+        this.node.data(Object.assign({}, env), args, callback);
+        return this;
+      }
       throw "Unsupported Operation";
     }
-  };
-  FileDesc.prototype.readLine=function readLine(callback){
-    if(typeof (this.node.data) == "string"){
-      var str=this.node.data;
-      if(this.ptr == str.length){
-        callback(null);
+    write(str) {
+      if (this.node.data == null) {
+        this.node.data = str;
+        return this;
+      }
+      if (typeof (this.node.data) == "string") {
+        this.node.data += str;
+        return this;
+      }
+      throw "Unsupported Operation";
+    }
+    read(callback) {
+      if (typeof (this.node.data) == "string") {
+        if (this.ptr == this.node.data.length)
+          return null;
+        var ret = this.node.data[this.ptr];
+        this.ptr++;
+        callback(ret);
+      }
+      else {
+        throw "Unsupported Operation";
+      }
+    }
+    readLine(callback) {
+      if (typeof (this.node.data) == "string") {
+        var str = this.node.data;
+        if (this.ptr == str.length) {
+          callback(null);
+          return;
+        }
+        var id = str.indexOf("\n", this.ptr);
+        if (id == -1) {
+          var ret = str.substr(this.ptr);
+          this.ptr = str.length;
+          callback(ret);
+        }
+        else {
+          var ret = str.substr(this.ptr, id - this.ptr);
+          this.ptr = id + 1;
+          callback(ret);
+        }
         return;
       }
-      var id=str.indexOf("\n", this.ptr);
-      if(id == -1){
-        var ret=str.substr(this.ptr);
-        this.ptr=str.length;
-        callback(ret);
-      }else{
-        var ret=str.substr(this.ptr, id - this.ptr);
-        this.ptr=id + 1;
-        callback(ret);
-      }
-      return;
-    }
-    throw "Unsupported Operation";
-  };
-  FileDesc.prototype.list=function list(){
-    if(this.node.type != "dir")
       throw "Unsupported Operation";
-    var ret=[];
-    for( var i in this.node.data){
-      if(i[0] == "/")
-        ret.push(i.substr(1));
     }
-    return ret;
-  };
+    list() {
+      if (this.node.type != "dir")
+        throw "Unsupported Operation";
+      var ret = [];
+      for (var i in this.node.data) {
+        if (i[0] == "/")
+          ret.push(i.substr(1));
+      }
+      return ret;
+    }
+    clear() {
+      this.node.data = null;
+      return this;
+    }
+  }
 
-  FileDesc.prototype.clear=function clear(){
-    this.node.data=null;
-    return this;
-  };
-
-  VFS.root={
+  VFS.root= Object.assign(Object.create(FileNode.prototype), {
     name:"",
     type:"dir",
     path:"",
-    data:{},
-    __proto__:FileNode.prototype
-  }
+    data:{}
+  });
   VFS.root.parent=VFS.root;
 
   VFS.lookup=function lookup(fullpath, newFile){

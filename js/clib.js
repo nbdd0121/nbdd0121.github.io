@@ -1,34 +1,38 @@
 (function(window){
-  function CLib(env){
-    this.env=env;
-    this.stdout=VFS.open("/dev/stdout");
-    this.stdin=VFS.open("/dev/stdin");
-  }
-  function getFullPath(clib, path){
-    if(path[0] != "/"){
-      return clib.env.WORKING_DIRECTORY + path;
+  class CLib {
+    constructor(env) {
+      this.env = env;
+      this.stdout = VFS.open("/dev/stdout");
+      this.stdin = VFS.open("/dev/stdin");
     }
-    return path;
-  }
-  CLib.prototype={
-    fopen:function fopen(path, newFlag){
-      return VFS.open(getFullPath(this, path), newFlag);
-    },
-    puts:function puts(cont){
+
+    _getFullPath(path){
+      if(path[0] != "/"){
+        return this.env.WORKING_DIRECTORY + path;
+      }
+      return path;
+    }
+
+    fopen(path, newFlag){
+      return VFS.open(this._getFullPath(path), newFlag);
+    }
+
+    puts(cont){
       this.stdout.write(cont);
-    },
+    }
 
     /* POSIX */
-    chdir:function chdir(path){
-      var f=VFS.lookup(getFullPath(this, path));
+    chdir(path){
+      var f=VFS.lookup(this._getFullPath(path));
       if(f == null){
         return -1;
       }
       this.env.WORKING_DIRECTORY=f.path + "/";
       return 0;
-    },
-    stat:function stat(path){
-      var f=VFS.lookup(getFullPath(this, path));
+    }
+
+    stat(path){
+      var f=VFS.lookup(this._getFullPath(path));
       if(f == null){
         return null;
       }
@@ -37,8 +41,9 @@
         type:f.type,
         exec:opened.canExec()
       };
-    },
-    exec:function exec(cmd, args, callback){
+    }
+
+    exec(cmd, args, callback){
       if(cmd[0]!="/"){
         var onceNonnull=false;
         var pathSplit=this.env.PATH.split(";");
@@ -84,7 +89,7 @@
       }
       file.exec(this.env, args, callback);
     }
-  };
+  }
 
   window.CLib=CLib;
   window.wrapCLib=function wrapCLib(func){
