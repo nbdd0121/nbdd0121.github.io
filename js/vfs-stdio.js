@@ -75,17 +75,16 @@
   
   var stdoutFile=VFS.lookup("/dev/stdout", 'inode/chardevice');
   stdoutFile.type="dev";
-  stdoutFile.open=function openStdout(){
-    return {
-      write:appendString,
-      __proto__:VFS.dummyDescProto
-    };
+  stdoutFile.open = function openStdout() {
+    return Object.assign(this.constructor.prototype.open.call(this), {
+      write:appendString
+    });
   };
   
   var stdinFile=VFS.lookup("/dev/stdin", 'inode/chardevice');
   stdinFile.type="dev";
   stdinFile.open=function openStdin(){
-    return {
+    return Object.assign(this.constructor.prototype.open.call(this), {
       readLine:function readLine(callback, funckey){
         function adjustWidth(input){
           input.style.width = document.body.clientWidth - input.offsetLeft + 'px';
@@ -128,9 +127,7 @@
       
       canRead:function canRead(){
         return true;
-      },
-      __proto__:VFS.dummyDescProto
-    };
-
+      }
+    });
   }
 })(VFS);

@@ -67,6 +67,7 @@
       }
       throw "Unsupported Operation";
     }
+
     read(callback) {
       if (typeof (this.node.data) == "string") {
         if (this.ptr == this.node.data.length)
@@ -79,6 +80,7 @@
         throw "Unsupported Operation";
       }
     }
+
     readLine(callback) {
       if (typeof (this.node.data) == "string") {
         var str = this.node.data;
@@ -114,66 +116,54 @@
     }
   }
 
-  VFS.root= Object.assign(Object.create(FileNode.prototype), {
-    name:"",
-    type:"inode/directory",
-    path:"",
-    data:Object.create(null)
+  VFS.root = Object.assign(Object.create(FileNode.prototype), {
+    parent: null,
+    path: "",
+    name: "",
+    type: "inode/directory",
+    data: Object.create(null)
   });
-  VFS.root.parent=VFS.root;
+  VFS.root.parent = VFS.root;
 
   VFS.lookup = function lookup(fullpath, newFileType){
-    var path=fullpath.substr(1).split("/");
+    let path = fullpath.substr(1).split("/");
 
+    // If there is trailing /, remove it, and make sure the type is directory.
     if(path[path.length - 1] === ''){
       path.pop();
       if (newFileType !== undefined && newFileType !== 'inode/directory')
         throw 'Is a directory';
     }
 
-    var cur=VFS.root;
-    for(var i=0; i < path.length; i++){
-      var subpath=path[i];
-      switch(subpath){
+    let cur = VFS.root;
+    for (let i = 0; i < path.length; i++){
+      let subpath = path[i];
+      switch (subpath) {
         case "":
         case ".":
           continue;
         case "..":
-          cur=cur.parent;
+          cur = cur.parent;
           continue;
       }
 
-      if(!cur.contains(subpath)){
-        if(newFileType === undefined){
+      if (!cur.contains(subpath)) {
+        if (newFileType === undefined) {
           return null;
         }
-        new FileNode(cur, subpath, i == path.length - 1?newFileType:"inode/directory");
+        new FileNode(cur, subpath, i == path.length - 1 ? newFileType : "inode/directory");
       }
-      cur=cur.get(subpath);
+      cur = cur.get(subpath);
     }
     return cur;
   }
 
   VFS.open = function open(fullpath, newFileType) {
-    var file=VFS.lookup(fullpath, newFileType);
-    if(file)
+    let file = VFS.lookup(fullpath, newFileType);
+    if (file)
       return file.open();
     return null;
   }
 
-  VFS.dummyDescProto={
-    /* Type Information */
-    isDirectory:function isDirectory(){
-      return false;
-    },
-    /* Permission Information */
-    canExec:function canExec(){
-      return false;
-    },
-    canRead:function canRead(){
-      return false;
-    },
-  };
-
-  window.VFS=VFS;
+  window.VFS = VFS;
 })(window);
