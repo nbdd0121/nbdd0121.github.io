@@ -132,5 +132,5 @@
     p('\033[0m');
     callback();
   }
-  VFS.open("/home/me", true).write(wrapCLib(guide));
+  VFS.open("/home/me", 'application/javascript').write(wrapCLib(guide));
 })(VFS, wrapCLib);

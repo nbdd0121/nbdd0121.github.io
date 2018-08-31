@@ -26,5 +26,5 @@
     lib.puts("\n");
     callback();
   }
-  VFS.open("/bin/ls", true).write(wrapCLib(ls));
+  VFS.open("/bin/ls", 'application/javascript').write(wrapCLib(ls));
 })(VFS, wrapCLib);

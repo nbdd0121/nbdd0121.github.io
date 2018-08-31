@@ -73,7 +73,7 @@
     }
   }
   
-  var stdoutFile=VFS.lookup("/dev/stdout", true);
+  var stdoutFile=VFS.lookup("/dev/stdout", 'inode/chardevice');
   stdoutFile.type="dev";
   stdoutFile.open=function openStdout(){
     return {
@@ -82,7 +82,7 @@
     };
   };
   
-  var stdinFile=VFS.lookup("/dev/stdin", true);
+  var stdinFile=VFS.lookup("/dev/stdin", 'inode/chardevice');
   stdinFile.type="dev";
   stdinFile.open=function openStdin(){
     return {

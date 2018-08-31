@@ -169,5 +169,5 @@
     }
     readAndExec();
   }
-  VFS.open("/bin/bash", true).write(bash);
+  VFS.open("/bin/bash", 'application/javascript').write(bash);
 })(VFS, wrapCLib);

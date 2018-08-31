@@ -1,28 +1,33 @@
 (function(window){
   var VFS={};
+
   class FileNode {
     constructor(parent, name, type) {
       this.parent = parent;
-      parent.data["/" + name] = this;
+      parent.data[name] = this;
       this.path = parent.path + "/" + name;
       this.name = name;
       this.type = type;
-      if (type == "dir") {
-        this.data = {};
+      if (type == "inode/directory") {
+        this.data = Object.create(null);
       }
     }
+
     contains(name) {
-      if (this.data["/" + name])
+      if (this.data[name])
         return true;
       return false;
     }
+
     get(name) {
-      return this.data["/" + name];
+      return this.data[name];
     }
+
     open() {
       return new FileDesc(this);
     }
   }
+
   class FileDesc {
     constructor(node) {
       this.node = node;
@@ -31,16 +36,16 @@
 
     /* Type Information */
     isDirectory(){
-      return this.node.type == "dir";
+      return this.node.type === "inode/directory";
     }
 
     /* Permission Information */
     canExec(){
-      return this.node.data instanceof Function;
+      return this.node.type === 'application/javascript';
     }
 
     canRead(){
-      return typeof (this.node.data) == "string";
+      return this.node.type === 'text/plain';
     }
 
     exec(env, args, callback) {
@@ -50,6 +55,7 @@
       }
       throw "Unsupported Operation";
     }
+
     write(str) {
       if (this.node.data == null) {
         this.node.data = str;
@@ -95,16 +101,13 @@
       }
       throw "Unsupported Operation";
     }
+
     list() {
-      if (this.node.type != "dir")
+      if (this.node.type != "inode/directory")
         throw "Unsupported Operation";
-      var ret = [];
-      for (var i in this.node.data) {
-        if (i[0] == "/")
-          ret.push(i.substr(1));
-      }
-      return ret;
+      return Object.keys(this.node.data);
     }
+
     clear() {
       this.node.data = null;
       return this;
@@ -113,18 +116,19 @@
 
   VFS.root= Object.assign(Object.create(FileNode.prototype), {
     name:"",
-    type:"dir",
+    type:"inode/directory",
     path:"",
-    data:{}
+    data:Object.create(null)
   });
   VFS.root.parent=VFS.root;
 
-  VFS.lookup=function lookup(fullpath, newFile){
+  VFS.lookup = function lookup(fullpath, newFileType){
     var path=fullpath.substr(1).split("/");
-    var ifntype="file";
-    if(!path[path.length - 1]){
+
+    if(path[path.length - 1] === ''){
       path.pop();
-      ifntype="dir";
+      if (newFileType !== undefined && newFileType !== 'inode/directory')
+        throw 'Is a directory';
     }
 
     var cur=VFS.root;
@@ -140,18 +144,18 @@
       }
 
       if(!cur.contains(subpath)){
-        if(!newFile){
+        if(newFileType === undefined){
           return null;
         }
-        new FileNode(cur, subpath, i == path.length - 1?ifntype:"dir");
+        new FileNode(cur, subpath, i == path.length - 1?newFileType:"inode/directory");
       }
       cur=cur.get(subpath);
     }
     return cur;
   }
 
-  VFS.open=function open(fullpath, newFile){
-    var file=VFS.lookup(fullpath, newFile);
+  VFS.open = function open(fullpath, newFileType) {
+    var file=VFS.lookup(fullpath, newFileType);
     if(file)
       return file.open();
     return null;

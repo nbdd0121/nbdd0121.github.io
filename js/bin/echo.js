@@ -49,5 +49,5 @@ Report echo bugs to nbdd0121@hotmail.com\n";
     }
     callback();
   }
-  VFS.open("/bin/echo", true).write(wrapCLib(echo));
+  VFS.open("/bin/echo", 'application/javascript').write(wrapCLib(echo));
 })(VFS, wrapCLib);
