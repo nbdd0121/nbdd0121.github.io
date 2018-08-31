@@ -57,10 +57,19 @@
       }
       return pc;
     }
+    function commonPrefix(a, b) {
+      var len=Math.min(a.length, b.length);
+      for(var i=0; i < len; i++){
+        if(a[i] != b[i]){
+          return a.substr(0, i);
+        }
+      }
+      return a.substr(0, len);
+    }
     function extractCommon(arr){
       var common=arr[0];
       for(var i=1; i < arr.length; i++){
-        common=common.common(arr[i]);
+        common=commonPrefix(common, arr[i]);
       }
       return common;
     }
