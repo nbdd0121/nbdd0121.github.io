@@ -3,9 +3,11 @@ async function main(env, args, lib) {
     var builtinFunc = {
       exit: function exit(args) {
         resolve();
+        return new Promise(() => {});
       },
       logout: function exit(args) {
         resolve();
+        return new Promise(() => {});
       },
       cd: async function cd(args) {
         if (!args[1]) {
@@ -74,6 +76,11 @@ async function main(env, args, lib) {
     }
 
     async function execute(arg) {
+      if (arg === '') {
+        await lib.puts('exit\n');
+        await builtinFunc.exit();
+      }
+
       var args = arg.trim().split(" ");
       for (var i = 0; i < args.length; i++) {
         if (args[i] == "") {
