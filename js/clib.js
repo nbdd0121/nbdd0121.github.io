@@ -1,144 +1,160 @@
-(function(window){
+(function (window) {
   class CLib {
     constructor(env) {
-      this.env = env;
-      this.stdout = VFS.open("/dev/stdout");
-      this.stdin = VFS.open("/dev/stdin");
+      return (async () => {
+        this.env = env;
+        this.stdout = await VFS.open("/dev/stdout");
+        this.stdin = await VFS.open("/dev/stdin");
+        return this;
+      })();
     }
 
-    _getFullPath(path){
-      if(path[0] != "/"){
+    _getFullPath(path) {
+      if (path[0] != "/") {
         return this.env.WORKING_DIRECTORY + path;
       }
       return path;
     }
 
-    fopen(path, newFlag){
+    fopen(path, newFlag) {
       return VFS.open(this._getFullPath(path), newFlag);
     }
 
-    puts(cont){
-      this.stdout.write(cont);
+    puts(cont) {
+      return this.stdout.writeAll(cont);
     }
 
     /* POSIX */
-    chdir(path){
-      var f=VFS.lookup(this._getFullPath(path));
-      if(f == null){
-        return -1;
-      }
-      this.env.WORKING_DIRECTORY=f.path + "/";
-      return 0;
+    async chdir(path) {
+      let newPath = VFS.resolve(this._getFullPath(path));
+      let file = await VFS.open(newPath);
+      if (file == null) throw new Error('No such file or directory');
+      if (!file.isDirectory()) throw new Error('Is not a directory');
+      this.env.WORKING_DIRECTORY = newPath + (newPath.endsWith('/') ? '' : '/');
     }
 
-    stat(path){
-      var f=VFS.lookup(this._getFullPath(path));
-      if(f == null){
+    async stat(path) {
+      var f = await VFS.lookup(this._getFullPath(path));
+      if (f == null) {
         return null;
       }
-      var opened=f.open();
+      var opened = f.open();
       return {
-        type:f.type,
-        exec:opened.canExec()
+        type: f.type,
+        exec: opened.canExec()
       };
     }
 
-    exec(cmd, args, callback){
-      if(cmd[0]!="/"){
-        var onceNonnull=false;
-        var pathSplit=this.env.PATH.split(";");
-        if(cmd.indexOf("/")!=-1){
+    async exec(cmd, args) {
+      if (cmd[0] != "/") {
+        var onceNonnull = false;
+        var pathSplit = this.env.PATH.split(";");
+        if (cmd.indexOf("/") != -1) {
           pathSplit.push(this.env.WORKING_DIRECTORY);
         }
-        for(var i=0;i<pathSplit.length;i++){
-          var p=pathSplit[i];
-          if(p[0]!="/"){
-            p=this.env.WORKING_DIRECTORY+p;
+        for (var i = 0; i < pathSplit.length; i++) {
+          var p = pathSplit[i];
+          if (p[0] != "/") {
+            p = this.env.WORKING_DIRECTORY + p;
           }
-          var file=VFS.open(p+"/"+cmd);
-          if(file==null){
+          var file = await VFS.open(p + "/" + cmd);
+          if (file == null) {
             continue;
           }
-          if(!file.canExec()){
-            if(file.isDirectory()){
-              onceNonnull="Is a directory";
-            }else{
-              onceNonnull="Permission denied"
+          if (!file.canExec()) {
+            if (file.isDirectory()) {
+              onceNonnull = "Is a directory";
+            } else {
+              onceNonnull = "Permission denied"
             }
             continue;
           }
-          file.exec(this.env, args, callback);
-          return;
+          return file.exec(this.env, args);
         }
-        if(onceNonnull){
+        if (onceNonnull) {
           throw onceNonnull;
-        }else{
+        } else {
           throw "command not found";
         }
       }
-      var file=VFS.open(cmd);
-      if(file==null){
+      var file = await VFS.open(cmd);
+      if (file == null) {
         throw "command not found";
       }
-      if(!file.canExec()){
-        if(file.isDirectory()){
+      if (!file.canExec()) {
+        if (file.isDirectory()) {
           throw "Is a directory";
-        }else{
+        } else {
           throw "Permission denied"
         }
       }
-      file.exec(this.env, args, callback);
+      return file.exec(this.env, args);
     }
   }
 
-  window.CLib=CLib;
-  window.wrapCLib=function wrapCLib(func){
-    return function(env, args, callback){
-      func(new CLib(env), args, callback);
-    };
-  };
+  window.CLib = CLib;
 })(window);
 
-(function(CLib){
-  CLib.prototype.historyNextLine=function(callback, specKey){
-    if(!this.HNLHistory){
-      this.HNLHistory=[];
+(function (CLib) {
+  CLib.prototype.historyNextLine = async function (specKey) {
+    if (!this.HNLHistory) {
+      this.HNLHistory = [];
     }
-    var history=this.HNLHistory;
-    var id=history.length;
-    this.stdin.readLine(function(val){
-      if(history[history.length - 1] != val){
-        history.push(val);
-        id=history.length;
-        if(history.length > 20){
-          history.splice(0, history.length - 20);
-          id=20;
-        }
+    var history = this.HNLHistory;
+    var id = history.length;
+
+    let promise = this.stdin.read(2048, 'string');
+
+    document.querySelector('#inputbox').addEventListener('keydown', function (e) {
+      var key;
+      switch (e.which) {
+        case 38:
+          key = "up";
+          break;
+        case 40:
+          key = "down";
+          break;
+        case 9:
+          key = "tab";
+          break;
+        default:
+          return;
       }
-      callback(val);
-    }, function(key, element){
-      if(key == "up"){
-        if(id == 0){
+      let element = document.querySelector('#inputbox');
+      if (key == "up") {
+        if (id == 0) {
           return;
         }
-        if(id == history.length){
-          inputBackup=element.value;
+        if (id == history.length) {
+          inputBackup = element.value;
         }
         id--;
         element.value = history[id];
-      }else if(key == "down"){
-        if(id == history.length){
+      } else if (key == "down") {
+        if (id == history.length) {
           return;
         }
         id++;
-        if(id == history.length){
+        if (id == history.length) {
           element.value = inputBackup;
-        }else{
+        } else {
           element.value = history[id];
         }
-      }else{
-        specKey&&specKey(key, element);
+      } else {
+        specKey && specKey(key, element);
       }
+      e.preventDefault();
     });
+
+    let [, val] = await promise;
+    if (history[history.length - 1] != val) {
+      history.push(val);
+      id = history.length;
+      if (history.length > 20) {
+        history.splice(0, history.length - 20);
+        id = 20;
+      }
+    }
+    return val;
   }
 })(CLib);

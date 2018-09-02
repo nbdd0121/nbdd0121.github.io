@@ -1,133 +1,151 @@
-(function(VFS){
-  var color="colorDefault";
-  var encode=true;
-  function parseConfigEscape(seq){
-    var splits=seq.split(";");
-    switch(splits[0]){
+{
+  // Global stdout states
+  let paragraph;
+  let inputbox;
+  let classList = ['colorDefault'];
+  let escapeContent = true;
+  let resolveStdin;
+
+  // Process escape sequence and update globla states
+  function parseEscape(seq) {
+    let splits = seq.split(";");
+    switch (splits[0]) {
       case "0":
-        color="colorDefault";
-        encode=true;
+        classList = ['colorDefault'];
+        escapeContent = true;
         break;
       case "1": {
-        color="";
-        for(var i=1; i<splits.length; i++){
-          color+="color"+splits[i]+" ";
+        classList = [];
+        for (let i = 1; i < splits.length; i++) {
+          classList.push('color' + splits[i]);
         }
         break;
       }
       case "2": {
-        color="colorDefault";
-        encode=false;
+        color = ['colorDefault'];
+        escapeContent = false;
         break;
       }
     }
   }
-  function encodeHtml(str){
-    var s="";
-    if(str.length == 0)
-      return "";
-    s=str.replace(/&/g, "&amp;");
-    s=s.replace(/</g, "&lt;");
-    s=s.replace(/>/g, "&gt;");
-    s=s.replace(/ /g, "&nbsp;");
-    s=s.replace(/\'/g, "&#39;");
-    s=s.replace(/\"/g, "&quot;");
-    s=s.replace(/\n/g, "<br>");
-    return s;
-  }
-  function genSingleLineCode(str){
-    var seq=str.split("\033[");
-    var ret;
-    if(seq[0]){
-      ret = [document.createElement('span')];
-      ret[0].className = color;
-      ret[0].innerHTML = encode?encodeHtml(seq[0]):seq[0];
-    }else{
-      ret = [];
-    }
-    for(var seqNum=1; seqNum<seq.length; seqNum++){
-      var txt=seq[seqNum];
-      var realTextBegin=txt.indexOf("m");
-      parseConfigEscape(txt.substr(0, realTextBegin));
-      var element = document.createElement('span');
-      element.className = color;
-      element.innerHTML = encode?encodeHtml(txt.substr(realTextBegin+1)):txt.substr(realTextBegin+1);
-      ret.push(element);
-    }
-    return ret;
-  }
-  function lastP() {
-    let ps = document.querySelectorAll('p');
-    return ps[ps.length - 1];
-  }
-  function appendString(str){
-    var datas=str.split("\n");
-    lastP().append(...genSingleLineCode(datas[0]));
-    for(var lineNum=1; lineNum<datas.length; lineNum++){
-      var line=datas[lineNum];
-      var prevp=lastP();
-      if(prevp.textContent=="")
-        prevp.innerHTML = "&nbsp;";
-      document.body.append(document.createElement('p'));
-      lastP().append(...genSingleLineCode(line));
+
+  function appendWithoutNewline(str) {
+    let first = true;
+    for (let text of str.split('\033[')) {
+      if (first) {
+        first = false;
+      } else {
+        let escapeEnd = text.indexOf('m');
+        parseEscape(text.substr(0, escapeEnd));
+        text = text.substr(escapeEnd + 1);
+      }
+      let element = document.createElement('span');
+      element.classList = classList;
+      if (escapeContent) {
+        element.textContent = text.replace(/ /g, '\u00a0');
+      } else {
+        element.innerHTML = text;
+      }
+      paragraph.appendChild(element);
     }
   }
-  
-  var stdoutFile=VFS.lookup("/dev/stdout", 'inode/chardevice');
-  stdoutFile.type="dev";
-  stdoutFile.open = function openStdout() {
-    return Object.assign(this.constructor.prototype.open.call(this), {
-      write:appendString
-    });
-  };
-  
-  var stdinFile=VFS.lookup("/dev/stdin", 'inode/chardevice');
-  stdinFile.type="dev";
-  stdinFile.open=function openStdin(){
-    return Object.assign(this.constructor.prototype.open.call(this), {
-      readLine:function readLine(callback, funckey){
-        function adjustWidth(input){
-          input.style.width = document.body.clientWidth - input.offsetLeft + 'px';
+
+  function appendString(str) {
+    // Update element
+    let allParagraphs = document.querySelectorAll('body>p');
+    paragraph = allParagraphs[allParagraphs.length - 1];
+
+    let first = true;
+    for (let line of str.split('\n')) {
+      if (first) {
+        first = false;
+      } else {
+        if (paragraph.textContent == "")
+          paragraph.innerHTML = "&nbsp;";
+        paragraph = document.createElement('p');
+        document.body.appendChild(paragraph);
+      }
+      appendWithoutNewline(line);
+    }
+  }
+
+  function adjustWidth() {
+    inputbox.style.width = document.body.clientWidth - inputbox.offsetLeft + 'px';
+  }
+
+  class StdoutNode extends VFS.FileNode {
+    constructor() {
+      super('', 'char', 0o666, 0);
+    }
+
+    doWrite(_offset, buffer) {
+      appendString(new TextDecoder('utf-8').decode(buffer));
+      return buffer.length;
+    }
+  }
+
+  class StdinNode extends VFS.FileNode {
+    constructor() {
+      super('', 'char', 0o666, 0);
+    }
+
+    doRead(_offset, buffer) {
+      return new Promise((resolve, _reject) => {
+        let initialValue = '';
+        if (inputbox) {
+          inputbox.remove();
+          initialValue = inputbox.value;
         }
-        var input=document.createElement('input');
-        input.id = 'inputbox';
-        input.className = color;
-        input.spellcheck = false;
-        lastP().append(input);
-        adjustWidth(input);
-        input.focus();
-        input.addEventListener('keypress', function(e){
-          if(e.which==13){
-            input.remove();
-            appendString(input.value+"\n");
-            callback(input.value);
-          }else if(e.which==9){
+
+        inputbox = document.createElement('input');
+        inputbox.id = 'inputbox';
+        inputbox.value = initialValue;
+        inputbox.className = classList;
+        inputbox.spellcheck = false;
+
+        // Update paragraph
+        let allParagraphs = document.querySelectorAll('body>p');
+        paragraph = allParagraphs[allParagraphs.length - 1];
+
+        paragraph.append(inputbox);
+        adjustWidth();
+        inputbox.focus();
+        inputbox.addEventListener('keydown', function(e) {
+          if (e.which === 68 && e.ctrlKey) {
+            // Ctrl + D
+            e.preventDefault();
+            if (inputbox.value == '') {
+              resolve(0);
+            }
+          }
+        });
+
+        inputbox.addEventListener('keypress', function (e) {
+          if (e.which == 13) {
+            inputbox.remove();
+            let value = inputbox.value + '\n';
+            inputbox = null;
+            appendString(value);
+            let encoded = new TextEncoder('utf-8').encode(value);
+            buffer.set(encoded);
+            resolve(encoded.length);
+          } else if (e.which == 9) {
+            // Tab
             e.preventDefault();
           }
         });
-        input.addEventListener('keydown', function(e){
-          var key;
-          switch(e.which){
-            case 38:
-              key="up";
-              break;
-            case 40:
-              key="down";
-              break;
-            case 9:
-              key="tab";
-              break;
-            default:
-              return;
-          }
-          funckey&&funckey(key, input);
-          e.preventDefault();
-        });
-      },
-      
-      canRead:function canRead(){
-        return true;
-      }
-    });
+      });
+    }
   }
-})(VFS);
+
+  document.documentElement.addEventListener('keydown', () => {
+    let inputbox = document.getElementById('inputbox');
+    if (inputbox) inputbox.focus();
+  });
+
+  (async function () {
+    await VFS.mkdir('/dev');
+    (await VFS.lookup('/dev/stdout', 'char')).mount(new StdoutNode());
+    (await VFS.lookup('/dev/stdin', 'char')).mount(new StdinNode());
+  })();
+}

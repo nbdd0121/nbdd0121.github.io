@@ -1,55 +1,52 @@
-(function(VFS, wrapCLib){
-  function bash(env, args, callback){
-    var lib=new CLib(env);
-    var builtinFunc={
-      exit:function exit(args, cbk){
-        callback();
+async function main(env, args, lib) {
+  return new Promise((resolve, reject) => {
+    var builtinFunc = {
+      exit: function exit(args) {
+        resolve();
       },
-      logout:function exit(args, cbk){
-        callback();
+      logout: function exit(args) {
+        resolve();
       },
-      cd:function cd(args, cbk){
-        if(!args[1]){
-          env.WORKING_DIRECTORY=env.HOME;
-        }else{
-          var newPath=lib.fopen(args[1]);
-          if(newPath == null){
-            lib.puts("cd: " + args[1] + ": No such file or directory\n");
-          }else if(!newPath.isDirectory()){
-            lib.puts("cd: " + args[1] + ": Not a directory\n");
-          }else{
-            env.WORKING_DIRECTORY=newPath.node.path + "/";
+      cd: async function cd(args) {
+        if (!args[1]) {
+          env.WORKING_DIRECTORY = env.HOME;
+        } else {
+          try {
+            await lib.chdir(args[1]);
+          } catch (ex) {
+            return lib.puts("cd: " + args[1] + ": " + ex.message);
           }
         }
-        cbk();
       }
     };
 
-    function simplifyPath(path){
-      if(path == env.HOME){
+    function simplifyPath(path) {
+      if (path == env.HOME) {
         return "~";
-      }else if(path.indexOf(env.HOME) == 0){
+      } else if (path.startsWith(env.HOME)) {
         return "~/" + path.substr(env.HOME.length);
-      }else{
+      } else {
         return path;
       }
     }
-    function printPrompt(dir){
-      lib.puts("\033[1;34m" + simplifyPath(env.WORKING_DIRECTORY)
-          + " \033[1;31m$ \033[0m");
+
+    function printPrompt(dir) {
+      return lib.puts("\033[1;34m" + simplifyPath(env.WORKING_DIRECTORY)
+        + " \033[1;31m$ \033[0m");
     }
-    function getAllPossibleChoices(paths, prefix){
-      var pc=[];
-      for(var i=0; i < paths.length; i++){
-        var f=lib.fopen(paths[i]);
-        if(!f)
+
+    async function getAllPossibleChoices(paths, prefix) {
+      var pc = [];
+      for (var i = 0; i < paths.length; i++) {
+        var f = await lib.fopen(paths[i]);
+        if (!f)
           continue;
-        var list=f.list();
-        for(var j=0; j < list.length; j++){
-          if(list[j].indexOf(prefix) == 0){
-            if(lib.fopen(f.node.path+"/"+list[j]).isDirectory()){
-              pc.push(list[j]+"/");
-            }else{
+        var list = await f.list();
+        for (var j = 0; j < list.length; j++) {
+          if (list[j].indexOf(prefix) == 0) {
+            if ((await lib.fopen(paths[i] + "/" + list[j])).isDirectory()) {
+              pc.push(list[j] + "/");
+            } else {
               pc.push(list[j]);
             }
           }
@@ -57,117 +54,120 @@
       }
       return pc;
     }
+
     function commonPrefix(a, b) {
-      var len=Math.min(a.length, b.length);
-      for(var i=0; i < len; i++){
-        if(a[i] != b[i]){
+      var len = Math.min(a.length, b.length);
+      for (var i = 0; i < len; i++) {
+        if (a[i] != b[i]) {
           return a.substr(0, i);
         }
       }
       return a.substr(0, len);
     }
-    function extractCommon(arr){
-      var common=arr[0];
-      for(var i=1; i < arr.length; i++){
-        common=commonPrefix(common, arr[i]);
+
+    function extractCommon(arr) {
+      var common = arr[0];
+      for (var i = 1; i < arr.length; i++) {
+        common = commonPrefix(common, arr[i]);
       }
       return common;
     }
-    function execute(arg){
-      var args=arg.trim().split(" ");
-      for(var i=0; i < args.length; i++){
-        if(args[i] == ""){
+
+    async function execute(arg) {
+      var args = arg.trim().split(" ");
+      for (var i = 0; i < args.length; i++) {
+        if (args[i] == "") {
           args.splice(i, 1);
           i--;
         }
       }
-      if(args.length == 0){
-        readAndExec();
-        return;
+      if (args.length == 0) {
+        return readAndExec();
       }
-      if(builtinFunc[args[0]]){
-        builtinFunc[args[0]](args, readAndExec);
-        return;
+      if (builtinFunc[args[0]]) {
+        await builtinFunc[args[0]](args);
+        return readAndExec();
       }
-      try{
-        lib.exec(args[0], args, readAndExec);
-      }catch(e){
-        lib.puts(args[0] + ": " + e + "\n");
-        readAndExec();
+      try {
+        await lib.exec(args[0], args, readAndExec);
+        return readAndExec();
+      } catch (e) {
+        await lib.puts(args[0] + ": " + e + "\n");
+        return readAndExec();
       }
     }
-    function readAndExec(){
+
+    function readAndExec() {
       printPrompt();
-      var prev="";
-      lib.historyNextLine(function(input){
-        execute(input);
-      }, function(key, element){
-        if(key != "tab")
+      var prev = "";
+      lib.historyNextLine(async function (key, element) {
+        if (key != "tab")
           return;
-        var currentInput=element.value;
-        if(currentInput == "")
+        var currentInput = element.value;
+        if (currentInput == "")
           return;
-        var currentArgIndex=currentInput.lastIndexOf(" ") + 1;
-        if(currentArgIndex == 0 && currentInput.lastIndexOf("/") == -1){
-          var pc=getAllPossibleChoices(env.PATH.split(";"), currentInput);
-          if(pc.length == 0){
-          }else if(pc.length == 1){
+        var currentArgIndex = currentInput.lastIndexOf(" ") + 1;
+        if (currentArgIndex == 0 && currentInput.lastIndexOf("/") == -1) {
+          var pc = await getAllPossibleChoices(env.PATH.split(";"), currentInput);
+          if (pc.length == 0) {
+          } else if (pc.length == 1) {
             element.value = pc[0];
-          }else{
-            var ext=extractCommon(pc);
-            if(ext == currentInput){
-              if(prev!=currentInput){
-                prev=currentInput;
+          } else {
+            var ext = extractCommon(pc);
+            if (ext == currentInput) {
+              if (prev != currentInput) {
+                prev = currentInput;
                 return;
               }
               /* Print out all possible alternative */
-              element.remove();
-              lib.puts(currentInput + "\n");
-              for(var i=0; i < pc.length; i++){
-                lib.puts(pc[i] + "  ");
+              async function p() {
+                await lib.puts(currentInput + "\n");
+                for (var i = 0; i < pc.length; i++) {
+                  await lib.puts(pc[i] + "  ");
+                }
+                await lib.puts("\n");
+                readAndExec();
               }
-              lib.puts("\n");
-              readAndExec();
-              document.querySelector("#inputbox").value = currentInput;
-            }else{
+              p();
+            } else {
               element.value = ext;
             }
           }
-        }else{
-          var prefix=currentInput.substr(0, currentArgIndex);
-          var arg=currentInput.substr(currentArgIndex);
-          var pathId=arg.lastIndexOf("/") + 1;
-          var path=arg.substr(0, pathId);
-          var file=arg.substr(pathId);
-          var pc=getAllPossibleChoices([path], file);
-          if(pc.length == 0){
-          }else if(pc.length == 1){
+        } else {
+          var prefix = currentInput.substr(0, currentArgIndex);
+          var arg = currentInput.substr(currentArgIndex);
+          var pathId = arg.lastIndexOf("/") + 1;
+          var path = arg.substr(0, pathId);
+          var file = arg.substr(pathId);
+          var pc = await getAllPossibleChoices([path], file);
+          if (pc.length == 0) {
+          } else if (pc.length == 1) {
             element.value = prefix + path + pc[0];
-          }else{
-            var ext=extractCommon(pc);
-            if(ext == file){
-              if(prev!=currentInput){
-                prev=currentInput;
+          } else {
+            var ext = extractCommon(pc);
+            if (ext == file) {
+              if (prev != currentInput) {
+                prev = currentInput;
                 return;
               }
               /* Print out all possible alternative */
-              element.remove();
-              lib.puts(currentInput + "\n");
-              for(var i=0; i < pc.length; i++){
-                lib.puts(pc[i] + "  ");
+              async function p() {
+                await lib.puts(currentInput + "\n");
+                for (var i = 0; i < pc.length; i++) {
+                  await lib.puts(pc[i] + "  ");
+                }
+                await lib.puts("\n");
+                readAndExec(currentInput);
               }
-              lib.puts("\n");
-              readAndExec();
-              document.querySelector("#inputbox").value = currentInput;
-            }else{
+              p();
+            } else {
               element.value = prefix + path + ext;
             }
           }
         }
 
-      });
+      }).then(execute);
     }
     readAndExec();
-  }
-  VFS.open("/bin/bash", 'application/javascript').write(bash);
-})(VFS, wrapCLib);
+  });
+}

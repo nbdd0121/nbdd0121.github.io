@@ -1,66 +1,55 @@
-VFS.lookup("/home/", 'inode/directory');
+(async function () {
+  await VFS.mkdir("/home");
+  await VFS.mkdir("/bin");
 
-VFS.open("/bin/clear", 'application/javascript').write(function(env, args, callback){
-  document.body.innerHTML = '<p></p>';
-  callback();
-});
-
-VFS.open("/bin/pwd", 'application/javascript').write(function(env, args, callback){
-  VFS.open("/dev/stdout").write(env.WORKING_DIRECTORY + "\n");
-  callback();
-});
-
-VFS.open("/bin/cat", 'application/javascript').write(wrapCLib(function(lib, args, callback){
-  if (args.length < 2) args[1] = '/dev/stdin';
-  var current=lib.fopen(args[1]);
-  if(current == null){
-    lib.puts("cat: " + args[1] + ": No such file or directory\n");
-    callback();
-  }else if(current.isDirectory()){
-    lib.puts("cat: " + args[1] + ": Is a directory\n");
-    callback();
-  }else if(!current.canRead()){
-    lib.puts("cat: " + args[1] + ": Permission denied\n");
-    callback();
-  }else{
-    function onRead(str){
-      if(str == null){
-        callback();
-      }else{
-        lib.puts(str+"\n");
-        current.readLine(onRead);
-      }
-    }
-    current.readLine(onRead);
-  }
-}));
-
-window.addEventListener('load', function() {
-  document.documentElement.addEventListener('keydown', function(){
-    document.querySelector("#inputbox").focus();
+  let file = await VFS.open("/bin/clear", 'file');
+  await file.writeAll(function () {
+    document.body.innerHTML = '<p></p>';
   });
 
-  var env={
-    PATH:"/bin/;.",
-    HOME:"/home/",
-    WORKING_DIRECTORY:"/home/"
+  file = await VFS.open("/bin/pwd", 'file');
+  await file.writeAll(function (env, _arg, lib) {
+    return lib.puts(env.WORKING_DIRECTORY + "\n");
+  });
+
+  file = await VFS.open("/bin/cat", 'file');
+  await file.writeAll(async function (lib, args, lib) {
+    if (args.length < 2) args[1] = '/dev/stdin';
+    var current = await lib.fopen(args[1]);
+    if (current == null) {
+      return lib.puts("cat: " + args[1] + ": No such file or directory\n");
+    } else if (current.isDirectory()) {
+      return lib.puts("cat: " + args[1] + ": Is a directory\n");
+    } else if (!current.canRead()) {
+      return lib.puts("cat: " + args[1] + ": Permission denied\n");
+    } else {
+      let buffer = new Uint8Array(2048);
+      let len;
+      while ((len = (await current.read(buffer))[0]) !== 0) {
+        await lib.puts(buffer.subarray(0, len));
+      }
+    }
+  });
+
+  await Promise.all([
+    VFS.load('/bin/ls', 'js/bin/ls.js'),
+    VFS.load('/bin/bash', 'js/bin/bash.js'),
+    VFS.load('/bin/echo', 'js/bin/echo.js')
+  ]);
+
+  var env = {
+    PATH: "/bin/;.",
+    HOME: "/home/",
+    WORKING_DIRECTORY: "/home/"
   };
 
-  var stdout=VFS.open("/dev/stdout");
-  stdout
-      .write("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
-  function createBash(){
-    VFS
-        .open("/bin/bash")
-        .exec(
-            env,
-            ["/bin/bash"],
-            function(){
-              window.close();
-              stdout
-                  .write("Permission Denied: You browser does not allow the window to be closed.\n");
-              createBash();
-            });
+  var stdout = await VFS.open("/dev/stdout");
+  await stdout.writeAll("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+
+  file = await VFS.open("/bin/bash");
+  while (true) {
+    await file.exec(env, ["/bin/bash"]);
+    window.close();
+    await stdout.writeAll("Permission Denied: You browser does not allow the window to be closed.\n");
   }
-  createBash();
-});
+})();
