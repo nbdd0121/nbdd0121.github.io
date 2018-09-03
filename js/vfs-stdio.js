@@ -30,7 +30,7 @@
 
   function appendWithoutNewline(str) {
     let first = true;
-    for (let text of str.split('\033[')) {
+    for (let text of str.split('\x1b[')) {
       if (first) {
         first = false;
       } else {

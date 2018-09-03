@@ -10,8 +10,8 @@ async function main(env, args, lib) {
   }
 
   function printPrompt(dir) {
-    return lib.puts("\033[1;34m" + simplifyPath(env.WORKING_DIRECTORY)
-      + " \033[1;31m$ \033[0m");
+    return lib.puts("\x1b[1;34m" + simplifyPath(env.WORKING_DIRECTORY)
+      + " \x1b[1;31m$ \x1b[0m");
   }
 
   async function getAllPossibleChoices(paths, prefix) {
