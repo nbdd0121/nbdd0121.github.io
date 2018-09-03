@@ -1,4 +1,5 @@
-(async function () {
+enqueueTask(async () => {
+
   await VFS.mkdir("/home");
   await VFS.mkdir("/bin");
 
@@ -37,19 +38,23 @@
     VFS.load('/bin/echo', 'js/bin/echo.js')
   ]);
 
-  var env = {
-    PATH: "/bin/;.",
-    HOME: "/home/",
-    WORKING_DIRECTORY: "/home/"
-  };
+  async function init() {
+    var env = {
+      PATH: "/bin/",
+      HOME: "/home/",
+      WORKING_DIRECTORY: "/home/"
+    };
 
-  var stdout = await VFS.open("/dev/stdout");
-  await stdout.writeAll("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+    var stdout = await VFS.open("/dev/stdout");
+    await stdout.writeAll("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
 
-  file = await VFS.open("/bin/bash");
-  while (true) {
-    await file.exec(env, ["/bin/bash"]);
-    window.close();
-    await stdout.writeAll("Permission Denied: You browser does not allow the window to be closed.\n");
+    file = await VFS.open("/bin/bash");
+    while (true) {
+      await file.exec(env, ["/bin/bash"]);
+      window.close();
+      await stdout.writeAll("Permission Denied: You browser does not allow the window to be closed.\n");
+    }
   }
-})();
+
+  init();
+});

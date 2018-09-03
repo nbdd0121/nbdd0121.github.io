@@ -1,4 +1,4 @@
-(async function(VFS){
+enqueueTask(async () => {
   await (await VFS.open("/home/MUNRecorder", 'file')).writeAll(function(){
     window.location="http://nbdd0121.github.io/MUNRecorder";
   });
@@ -9,4 +9,4 @@
     window.location="http://nbdd0121.github.io/JSMinifier";
   });
   await VFS.load('/home/me', 'js/resume.js');
-})(VFS);
+});

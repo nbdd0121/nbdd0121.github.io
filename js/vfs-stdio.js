@@ -2,7 +2,7 @@
   // Global stdout states
   let paragraph;
   let inputbox;
-  let classList = ['colorDefault'];
+  let classList = [];
   let escapeContent = true;
   let resolveStdin;
 
@@ -11,7 +11,7 @@
     let splits = seq.split(";");
     switch (splits[0]) {
       case "0":
-        classList = ['colorDefault'];
+        classList = [];
         escapeContent = true;
         break;
       case "1": {
@@ -22,7 +22,7 @@
         break;
       }
       case "2": {
-        color = ['colorDefault'];
+        color = [];
         escapeContent = false;
         break;
       }
@@ -73,18 +73,7 @@
     inputbox.style.width = document.body.clientWidth - inputbox.offsetLeft + 'px';
   }
 
-  class StdoutNode extends VFS.FileNode {
-    constructor() {
-      super('', 'char', 0o666, 0);
-    }
-
-    doWrite(_offset, buffer) {
-      appendString(new TextDecoder('utf-8').decode(buffer));
-      return buffer.length;
-    }
-  }
-
-  class StdinNode extends VFS.FileNode {
+  class TtyNode extends VFS.FileNode {
     constructor() {
       super('', 'char', 0o666, 0);
     }
@@ -110,7 +99,7 @@
         paragraph.append(inputbox);
         adjustWidth();
         inputbox.focus();
-        inputbox.addEventListener('keydown', function(e) {
+        inputbox.addEventListener('keydown', (e) => {
           if (e.which === 68 && e.ctrlKey) {
             // Ctrl + D
             e.preventDefault();
@@ -120,7 +109,7 @@
           }
         });
 
-        inputbox.addEventListener('keypress', function (e) {
+        inputbox.addEventListener('keypress', (e) => {
           if (e.which == 13) {
             inputbox.remove();
             let value = inputbox.value + '\n';
@@ -136,6 +125,11 @@
         });
       });
     }
+
+    doWrite(_offset, buffer) {
+      appendString(new TextDecoder('utf-8').decode(buffer));
+      return buffer.length;
+    }
   }
 
   document.documentElement.addEventListener('keydown', () => {
@@ -143,9 +137,11 @@
     if (inputbox) inputbox.focus();
   });
 
-  (async function () {
+  VFS.tty = new TtyNode();
+
+  enqueueTask(async () => {
     await VFS.mkdir('/dev');
-    (await VFS.lookup('/dev/stdout', 'char')).mount(new StdoutNode());
-    (await VFS.lookup('/dev/stdin', 'char')).mount(new StdinNode());
-  })();
+    (await VFS.lookup('/dev/stdout', 'char')).mount(VFS.tty);
+    (await VFS.lookup('/dev/stdin', 'char')).mount(VFS.tty);
+  });
 }

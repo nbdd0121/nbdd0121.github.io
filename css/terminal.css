@@ -3,6 +3,7 @@ html{
 }
 
 body{
+	color:#EEEEEC;
 	background-color: #3D3D3D;
 	font-size: 17px;
 	font-family: Consolas, Courier, monospace;
@@ -23,14 +24,10 @@ p{
 	outline: none;
 	border: none;
 	margin: 0px;
-	font-size: 1em;
-	font-family: Consolas, Courier, monospace;
+	font: inherit;
 	padding: 0;
-	/*font-weight:bold;*/
-}
-.colorDefault{
-	color:#EEEEEC;
-	background-color:#3D3D3D;
+	color: inherit;
+	background: inherit;
 }
 a:link{
 	color:skyblue;
@@ -98,12 +95,8 @@ a:visited{
 @media print {
 	body {
 		font-size: 12px;
+		color: black;
 		background: white;
-	}
-
-	.colorDefault{
-		color:black;
-		background-color:white;
 	}
 
 	.page-break {

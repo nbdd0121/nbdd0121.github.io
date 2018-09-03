@@ -273,9 +273,9 @@ class FileDesc {
     if ((this.node.mode & 0o100) === 0) throw new Error('permission denied');
     let code = await this.readAll('string');
     let globalEval = eval;
-    let func = globalEval('(' + code + ')\n//@ sourceURL=' + this.node.name + '.js');
+    let func = globalEval('(' + code + ')\n//# sourceURL=' + this.node.name + '.js');
     let envClone = Object.assign({}, env);
-    return func(envClone, args, await new CLib(envClone));
+    return func(envClone, args, new CLib(envClone));
   }
 
   // read(size, format = 'Uint8Array') -> [size, result]
@@ -360,3 +360,26 @@ async function load(path, url) {
 }
 
 VFS.load = load;
+
+// Utility for synchronised initialisation
+
+{
+  let queue = [];
+  async function start() {
+    while (true) {
+      let task = queue[0];
+      await task();
+      queue.shift();
+      if (queue.length === 0) {
+        return;
+      }
+    }
+  }
+
+  window.enqueueTask = function enqueueTask(task) {
+    queue.push(task);
+    if (queue.length === 1) {
+      start();
+    }
+  }
+}
