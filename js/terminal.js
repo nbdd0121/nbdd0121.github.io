@@ -41,6 +41,14 @@ enqueueTask(async () => {
   (await VFS.lookup('/bin/markdown', 'file')).mount(null, 'netfs', 'js/bin/markdown.js');
   (await VFS.mkdir('/home/blog')).mount(null, 'netfs', 'blog/manifest');
 
+  function cmdFromHash(hash) {
+    // Remove prefix #
+    hash = hash.substr(1);
+    // For now deal with markdown files only
+    if (!hash.endsWith('.md')) return null;
+    return ['markdown', hash];
+  }
+
   async function init() {
     var env = {
       PATH: "/bin/",
@@ -48,8 +56,18 @@ enqueueTask(async () => {
       WORKING_DIRECTORY: "/home/"
     };
 
-    var stdout = await VFS.open("/dev/stdout");
-    await stdout.writeAll("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+    let lib = new CLib(env);
+    await lib.puts("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+
+    let firstCommand = cmdFromHash(location.hash);
+    if (firstCommand) {
+      await lib.puts('\x1b[1;34m~ \x1b[1;31m$ \x1b[0m' + firstCommand.join(' '));
+      try {
+        await lib.exec(firstCommand[0], firstCommand);
+      } catch (ex) {
+        await lib.puts(`${firstCommand[0]}: ${ex.message}`);
+      }
+    }
 
     file = await VFS.open("/bin/bash");
     while (true) {
