@@ -41,7 +41,7 @@
       let element = document.createElement('span');
       element.classList = classList;
       if (escapeContent) {
-        element.textContent = text.replace(/ /g, '\u00a0');
+        element.textContent = text;
       } else {
         element.innerHTML = text;
       }
@@ -51,7 +51,7 @@
 
   function appendString(str) {
     // Update element
-    let allParagraphs = document.querySelectorAll('body>p');
+    let allParagraphs = document.querySelectorAll('body>div');
     paragraph = allParagraphs[allParagraphs.length - 1];
 
     let first = true;
@@ -61,7 +61,7 @@
       } else {
         if (paragraph.textContent == "")
           paragraph.innerHTML = "&nbsp;";
-        paragraph = document.createElement('p');
+        paragraph = document.createElement('div');
         document.body.appendChild(paragraph);
       }
       appendWithoutNewline(line);
@@ -92,7 +92,7 @@
         inputbox.spellcheck = false;
 
         // Update paragraph
-        let allParagraphs = document.querySelectorAll('body>p');
+        let allParagraphs = document.querySelectorAll('body>div');
         paragraph = allParagraphs[allParagraphs.length - 1];
 
         paragraph.append(inputbox);

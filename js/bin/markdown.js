@@ -18,7 +18,7 @@ async function main(env, args, lib) {
     div.innerHTML = result;
     div.className = 'markdown';
     document.body.appendChild(div);
-    document.body.appendChild(document.createElement('p'));
+    document.body.appendChild(document.createElement('div'));
 
     await includeStylesheet('css/markdown.css');
 }

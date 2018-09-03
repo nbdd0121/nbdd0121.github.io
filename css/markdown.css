@@ -1,3 +1,10 @@
 .markdown {
+	/* Override terminal.css */
+	line-height: initial;
+	white-space: initial;
 	font-family: 'Times New Roman', Times, serif;
+}
+
+.markdown pre {
+	white-space: pre-wrap;
 }

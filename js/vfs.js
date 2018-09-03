@@ -233,8 +233,9 @@ VFS.FileNode = class FileNode {
           let text = new TextDecoder('utf-8').decode(this.data);
           this.data = [];
           for (let item of text.split('\n')) {
+            item = item.trim();
             if (!item) continue;
-            let [name, type, mode, url] = text.split(' ');
+            let [name, type, mode, url] = item.split(' ');
             this.data.push(new NetfsNode(name, type, parseInt(mode, 8), url));
           }
         }
