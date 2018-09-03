@@ -99,7 +99,7 @@
         adjustWidth();
         inputbox.focus();
         inputbox.addEventListener('keydown', (e) => {
-          if (e.which === 68 && e.ctrlKey) {
+          if (e.key === 'd' && e.ctrlKey) {
             // Ctrl + D
             e.preventDefault();
             if (inputbox.value == '') {
@@ -109,7 +109,7 @@
         });
 
         inputbox.addEventListener('keypress', (e) => {
-          if (e.which == 13) {
+          if (e.key == 'Enter') {
             inputbox.remove();
             let value = inputbox.value + '\n';
             inputbox = null;
@@ -117,8 +117,7 @@
             let encoded = new TextEncoder('utf-8').encode(value);
             buffer.set(encoded);
             resolve(encoded.length);
-          } else if (e.which == 9) {
-            // Tab
+          } else if (e.key == 'Tab') {
             e.preventDefault();
           }
         });

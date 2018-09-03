@@ -47,9 +47,9 @@ async function main(env, args, lib) {
     return new Promise((resolve, reject) => {
       function tryReadLine() {
         printPrompt();
-        let prev = '';
+        let prev = null;
         lib.historyNextLine(async function (key, inputbox) {
-          if (key != 'tab')
+          if (key != 'Tab')
             return;
           let input = inputbox.value;
           if (input == '')

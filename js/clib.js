@@ -92,42 +92,35 @@ CLib.prototype.historyNextLine = async function (specKey) {
   let inputbox = document.getElementById('inputbox');
 
   inputbox.addEventListener('keydown', (e) => {
-    let key;
-    switch (e.which) {
-      case 38:
-        key = "up";
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        if (id == 0) {
+          break;
+        }
+        if (id == history.length) {
+          inputBackup = inputbox.value;
+        }
+        id--;
+        inputbox.value = history[id].slice(0, -1);
         break;
-      case 40:
-        key = "down";
-        break;
-      case 9:
-        key = "tab";
+      case 'ArrowDown':
+        e.preventDefault();
+        if (id == history.length) {
+          return;
+        }
+        id++;
+        if (id == history.length) {
+          inputbox.value = inputBackup;
+        } else {
+          inputbox.value = history[id].slice(0, -1);
+        }
+      case 'Tab':
+        specKey && specKey(e.key, inputbox);
+        e.preventDefault();
         break;
       default:
         return;
-    }
-    e.preventDefault();
-    if (key == "up") {
-      if (id == 0) {
-        return;
-      }
-      if (id == history.length) {
-        inputBackup = inputbox.value;
-      }
-      id--;
-      inputbox.value = history[id].slice(0, -1);
-    } else if (key == "down") {
-      if (id == history.length) {
-        return;
-      }
-      id++;
-      if (id == history.length) {
-        inputbox.value = inputBackup;
-      } else {
-        inputbox.value = history[id].slice(0, -1);
-      }
-    } else {
-      specKey && specKey(key, inputbox);
     }
   });
 
