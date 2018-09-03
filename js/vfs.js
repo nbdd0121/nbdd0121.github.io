@@ -410,14 +410,6 @@ function loadFile(url) {
   });
 }
 
-async function load(path, url) {
-  let filePromise = VFS.lookup(path, 'file', 0o777);
-  let buffer = await loadFile(url);
-  return new FileDesc(await filePromise).writeAll(buffer);
-}
-
-VFS.load = load;
-
 // Utility for synchronised initialisation
 
 {

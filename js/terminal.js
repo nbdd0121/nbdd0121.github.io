@@ -1,20 +1,33 @@
 enqueueTask(async () => {
 
+  async function load(path, url) {
+    let file = await VFS.lookup(path, 'file');
+    let buffer = await loadFile(url);
+    return file.open().writeAll(buffer);
+  }
+
+  async function lazyload(path, url) {
+    let file = await VFS.lookup(path, 'file');
+    file.mount(null, 'netfs', url);
+  }
+
+  async function define(path, content) {
+    let file = await VFS.lookup(path, 'file');
+    return file.open().writeAll(content);
+  }
+
   await VFS.mkdir("/home");
   await VFS.mkdir("/bin");
 
-  let file = await VFS.open("/bin/clear", 'file');
-  await file.writeAll(function () {
+  await define('/bin/clear', function () {
     document.body.innerHTML = '<p></p>';
   });
 
-  file = await VFS.open("/bin/pwd", 'file');
-  await file.writeAll(function (env, _arg, lib) {
+  await define('/bin/pwd', function (env, _arg, lib) {
     return lib.puts(env.WORKING_DIRECTORY + "\n");
   });
 
-  file = await VFS.open("/bin/cat", 'file');
-  await file.writeAll(async function (lib, args, lib) {
+  await define('/bin/cat', async function (lib, args, lib) {
     if (args.length < 2) args[1] = '/dev/stdin';
     var current = await lib.fopen(args[1]);
     if (current == null) {
@@ -32,14 +45,13 @@ enqueueTask(async () => {
     }
   });
 
-  await Promise.all([
-    VFS.load('/bin/ls', 'js/bin/ls.js'),
-    VFS.load('/bin/bash', 'js/bin/bash.js'),
-    VFS.load('/bin/echo', 'js/bin/echo.js')
-  ]);
+  await lazyload('/bin/echo', 'js/bin/echo.js');
+  await lazyload('/bin/markdown', 'js/bin/markdown.js');
 
-  (await VFS.lookup('/bin/markdown', 'file')).mount(null, 'netfs', 'js/bin/markdown.js');
   (await VFS.mkdir('/home/blog')).mount(null, 'netfs', 'blog/manifest');
+  await lazyload('/home/me', 'js/resume.js');
+
+  await Promise.all([load('/bin/ls', 'js/bin/ls.js'), load('/bin/bash', 'js/bin/bash.js')]);
 
   function cmdFromHash(hash) {
     // Remove prefix #
@@ -73,7 +85,7 @@ enqueueTask(async () => {
     while (true) {
       await file.exec(env, ["/bin/bash"]);
       window.close();
-      await stdout.writeAll("Permission Denied: You browser does not allow the window to be closed.\n");
+      await lib.puts("Permission Denied: You browser does not allow the window to be closed.\n");
     }
   }
 

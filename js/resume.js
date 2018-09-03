@@ -8,7 +8,7 @@ async function main(_env, args, lib) {
     ["", 'XRMI', 'Java networking library for smarter remote method invocation'],
     ["http://nbdd0121.github.io/JSMinifier", 'JSMinifier', 'ES5 Minifier and obfuscator'],
     ["http://nbdd0121.github.io/MUNRecorder", 'MUNRecorder', 'Model United Nations conference organizer'],
-    ["http://nbdd0121.github.com/SATVocab", 'SATVocab', 'A tool helps Chinese students recite SAT vocabularies'],
+    ["http://nbdd0121.github.io/SATVocab", 'SATVocab', 'A tool helps Chinese students recite SAT vocabularies'],
     'Some Old & Discontinued Works', ["", 'NorlitOS', '32-bit operating system project'],
     ["", 'SakiOS', 'Bootloader Environment'],
     ["", 'NodokaJS', 'Javascript runtime project'],
