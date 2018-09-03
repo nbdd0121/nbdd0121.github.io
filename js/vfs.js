@@ -48,12 +48,17 @@ let VFS = {
 
 // File node superclass
 VFS.FileNode = class FileNode {
-  constructor(name, type, mode, length) {
+  constructor(name, type, mode) {
     this.name = name;
     this.type = type;
     this.mode = mode;
-    this.length = length;
     this.pointer = null;
+  }
+
+  length() {
+    if (this.pointer) return this.pointer.length();
+    if (this.doLength) return this.doLength();
+    throw new Error('length is not implemented');
   }
 
   read(offset, buffer) {
@@ -114,7 +119,7 @@ VFS.FileNode = class FileNode {
     if (fs !== '') {
       let mounter = VFS._fileSystemRegistry[fs];
       if (!mounter) throw new Error('cannot find file system ' + fs);
-      target = mounter(target, ...mountParam);
+      target = mounter(target, this, ...mountParam);
     }
     this.pointer = target;
   }
@@ -122,18 +127,19 @@ VFS.FileNode = class FileNode {
   async lookup(path, create = '', mode) {
     if (path.length === 0) return this;
     if (path[0] == '/') return this.lookup(path.substr(1), create);
-    let [subpath, rest] = path.split('/', 2);
-    let node = await this.finddir(subpath);
+    let pathIndex = path.indexOf('/');
     // Not the final level
-    if (rest !== undefined) {
+    if (pathIndex !== -1) {
+      let node = await this.finddir(path.substr(0, pathIndex));
       if (node == null) return null;
-      return node.lookup(rest, create, 0o777);
+      return node.lookup(path.substr(pathIndex + 1), create, 0o777);
     }
     // Final level
+    let node = await this.finddir(path);
     if (node == null) {
       if (!create) return null;
       if (mode === undefined) mode = create === 'dir' ? 0o777 : 0o666;
-      node = await (create == 'dir' ? this.mkdir(subpath, mode) : this.create(subpath, create, mode));
+      node = await (create == 'dir' ? this.mkdir(path, mode) : this.create(path, create, mode));
     }
     while (node.pointer) {
       node = node.pointer;
@@ -150,13 +156,18 @@ VFS.FileNode = class FileNode {
 {
   class RamfsNode extends VFS.FileNode {
     constructor(name, type, mode, length) {
-      super(name, type, mode, length);
+      super(name, type, mode);
+      this._length = length;
       this.data = type == 'dir' ? [] : new Uint8Array(new ArrayBuffer(0));
+    }
+
+    async doLength() {
+      return this._length;
     }
 
     async doRead(offset, buffer) {
       if (this.type === 'dir') throw new Error('read is not available on directory');
-      let end = Math.min(offset + buffer.length, this.length);
+      let end = Math.min(offset + buffer.length, this._length);
       if (end <= offset) return 0;
       buffer.set(this.data.subarray(offset, end));
       return end - offset;
@@ -174,7 +185,7 @@ VFS.FileNode = class FileNode {
         this.data = newBuffer;
       }
       this.data.set(buffer, offset);
-      this.length = newLength;
+      this._length = newLength;
       return buffer.length;
     }
 
@@ -203,6 +214,56 @@ VFS.FileNode = class FileNode {
   }
 
   VFS.registerFs('ramfs', _ => new RamfsNode('', 'dir', 0o777, 0));
+}
+
+// NetFS
+{
+  class NetfsNode extends VFS.FileNode {
+    constructor(name, type, mode, url) {
+      // Write is not allowed
+      super(name, type, mode & 0o555, 0);
+      this.url = url;
+      this.data = null;
+    }
+
+    async _load() {
+      if (!this.data) {
+        this.data = await loadFile(this.url);
+        if (this.type === 'dir') {
+          let text = new TextDecoder('utf-8').decode(this.data);
+          this.data = [];
+          for (let item of text.split('\n')) {
+            if (!item) continue;
+            let [name, type, mode, url] = text.split(' ');
+            this.data.push(new NetfsNode(name, type, parseInt(mode, 8), url));
+          }
+        }
+      }
+    }
+
+    async doLength() {
+      if (this.type === 'dir') throw new Error('length is not available on directory');
+      await this._load();
+      return this.data.length;
+    }
+
+    async doRead(offset, buffer) {
+      if (this.type === 'dir') throw new Error('read is not available on directory');
+      await this._load();
+      let end = Math.min(offset + buffer.length, this.data.length);
+      if (end <= offset) return 0;
+      buffer.set(this.data.subarray(offset, end));
+      return end - offset;
+    }
+
+    async doReaddir() {
+      if (this.type !== 'dir') throw new Error('readdir is only available on directory');
+      await this._load();
+      return this.data;
+    }
+  }
+
+  VFS.registerFs('netfs', (_, node, url) => new NetfsNode(node.name, node.type, node.mode, url));
 }
 
 // Register root
@@ -302,8 +363,9 @@ class FileDesc {
   }
 
   async readAll(format) {
-    let [len, buf] = await this.read(this.node.length, format);
-    if (len != this.node.length) throw new Error('cannot read all');
+    let length = await this.node.length();
+    let [len, buf] = await this.read(length, format);
+    if (len != length) throw new Error('cannot read all');
     return buf;
   }
 
@@ -337,13 +399,11 @@ function loadFile(url) {
     var request = new XMLHttpRequest();
     request.open("GET", url, true);
     request.responseType = "arraybuffer";
-    request.onload = function () {
-      var buffer = request.response;
-      if (buffer) {
-        resolve(new Uint8Array(buffer));
-      } else {
-        reject(new Error('Cannot not load ' + url));
-      }
+    request.onerror = () => {
+      reject(new Error('Cannot not load ' + url));
+    }
+    request.onload = () => {
+      resolve(new Uint8Array(request.response));
     };
     request.send(null);
   });
