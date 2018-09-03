@@ -1,6 +1,9 @@
 async function main(_env, args, lib) {
   let projects = [
-    'Stable Projects', ["", 'Encoding', 'A whatwg encoding specification conforming encoding library in Javascript'],
+    'Stable Projects',
+    ["", 'riscv-dbt', 'My BA degree project, a dynamic binary translator from RISC-V to AMD64'],
+    ["", 'AppMover', 'A simple tool for moving installed programs on Windows'],
+    ["", 'Encoding', 'A whatwg encoding specification conforming encoding library in Javascript'],
     ["", 'norlit-libc', 'A C11 specification conformant library implementation from scratch'],
     ["", 'XRMI', 'Java networking library for smarter remote method invocation'],
     ["http://nbdd0121.github.io/JSMinifier", 'JSMinifier', 'ES5 Minifier and obfuscator'],
@@ -24,21 +27,19 @@ async function main(_env, args, lib) {
     //['https://github.com/nbdd0121/MW-PageRating', 'PageRating', 'Simple rating widget that allows you to rate a page using 1-5 stars'],
   ];
 
-  let verbose = args[1] == '--verbose';
-
   await lib.puts(`\x1b[2m
 <b>== Personal Information ==</b>
 Name: Xuan Guo, aka Gary
 Date of Birth: Jan 21st, 1998
-Email: <gary@garyguo.net>gary@garyguo.net</a>
+Email: gary${'@'}garyguo.net
 GitHub: <a href="https://github.com/nbdd0121/" target="_blank">@nbdd0121</a>
 Website: <a href="https://garyguo.net/" target="_blank">garyguo.net</a>
 
 <b>== Education ==</b>
-Undergraduate: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a> (2015-2018)
-  Part IB Tripos: 1st Class Honor
-  Part IA Tripos: 1st Class Honor
-High school: <a href="http://www.nwgjb.com/en/index.aspx" target="_blank">Ningbo Foreign Language School</a> (2012-2015)
+Bachelor of Art in Computer Science: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a> (2015-2018)
+  Part II Tripos: 1st Class Honour with Distinction
+  Part IB Tripos: 1st Class Honour
+  Part IA Tripos: 1st Class Honour
 
 <b>== Skills ==</b>
 Languages:
@@ -48,30 +49,19 @@ Languages:
 Other skills:
   Web Development (Proficient)
   Hardware Development (Familiar)
-  Compiler Construction (Hobby, Familiar with parsing)
+  Compiler Construction (Familiar)
   Operating System Development (Hobby)
 
 <b>== Awards ==</b>
-`);
-
-  if (verbose) {
-    await lib.puts(`<b>High school:</b>
-  Euclid Mathematics Contest 2013: Rank #6, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2013/2013EuclidResults.pdf">REF</a>]
-  Euclid Mathematics Contest 2014: Rank #15, Best in School. [<a href="https://cemc.math.uwaterloo.ca/contests/past_contests/2014/2014EuclidResults.pdf">REF</a>]
-  Stanford Math Tournamant China 2014: Power Round Bronze Metal, Team Round #6, Overall Team #10. [<a href="http://sumo.stanford.edu/smt/2014-china/results.html">REF</a>]
-  Wuxi National Model United Nations 2013: Outstanding Delegate.
-<b>University:</b>
-`);
-  }
-
-  await lib.puts(`  BCS Award for an Outstanding Second Year Student
+  ECM Prize for the Best Part II Student
+  BCS Award for an Outstanding Second Year Student
   G-Research Prize for the Best Part IA Student
 
 <b>== Working Experience ==</b>
-Software Developer Intern, Best Internet Technology CO., LTD (2013 Summer)
-* Best Internet Technology CO., LTD is a Chinese software solutions provider, mainly providing solution for its logisitics subsidiary.
-* Researched on Chinese text tokenization, and developed a prototype capable of replying user queries by keyword extraction.
-* Developed a web-based statistics viewer for custom service team.
+Research Intern, Microsoft Research Cambridge (2017 Summer)
+* Participate in Project Pelican, an archive storage project.
+* Programming on low-level, interfacing with hardware and operating system directly.
+* Gained experience about real-life concurrent programming.
 
 SoC Developer Intern, lowRISC Project, University of Cambridge Computer Laboratory (2016 Summer)
 * lowRISC is an open source project aiming to create a fully open-sourced, Linux-capable, RISC-V-based SoC.
@@ -84,22 +74,20 @@ SoC Developer Intern, lowRISC Project, University of Cambridge Computer Laborato
 * Achieved 4x speed-up for video playback under RISC-V linux.
 * Created detailed documentation of developed components and a tutorial of creating extensions.
 
+Software Developer Intern, Best Internet Technology CO., LTD (2013 Summer)
+* Best Internet Technology CO., LTD is a Chinese software solutions provider, mainly providing solution for its logisitics subsidiary.
+* Researched on Chinese text tokenization, and developed a prototype capable of replying user queries by keyword extraction.
+* Developed a web-based statistics viewer for custom service team.
+
 <b>== Activities ==</b>
-`);
-
-  if (verbose) {
-    await lib.puts(`<b>High school:</b>
-  Technical Director, Model United Nations Society (2013-2014)
-<b>University:</b>
-`);
-  }
-
-  await lib.puts(`  Webmaster, Peterhouse JCR (2016)
-  IT Officer, Cambridge University Chinese Culture Society (2016)
+  Part IB Demonstrator, Computer Laboratory, University of Cambridge (2017)
+  * Teach Java during PArt IB Further Java help sessions
+  Part IA Demonstrator, Computer Laboratory, University of Cambridge (2016)
+  * Teach Standard ML during Part IA ML help sessions
   Open Day Helper, Computer Laboratory, University of Cambridge (2016)
   * Demonstrate objective and goal of Part IA Java course
-  Part IA Demonstrator, Computer Laboratory, University of Cambridge (2016)
-  * Demonstrate ML programming language during Part IA ML help sessions
+  Webmaster, Peterhouse JCR (2016)
+  IT Officer, Cambridge University Chinese Culture Society (2016)
 
 <b>== Hobbies and Interests ==<b>
   * Reading specifications (ex. C11 specification)
@@ -120,16 +108,6 @@ SoC Developer Intern, lowRISC Project, University of Cambridge Computer Laborato
       item[0] = 'https://github.com/nbdd0121/' + item[1];
     }
     await lib.puts('&nbsp;&nbsp;<a href="' + item[0] + '" target="_blank">' + item[1] + '</a> ' + item[2] + '\n');
-  }
-
-  if (verbose) {
-    await lib.puts(`
-<b>== Side Links ==</b>
-<a href="http://www.clang.pub/wiki/C11">clang.pub</a> [CHINESE] A MediaWiki website for C11 specification translation. I am a administrator and a translator of this site.
-<a href="http://blog.csdn.net/nbdd0121">My CSDN Blog</a> [CHINESE] Blog posts about OS development written in high school. No longer updated.
-`);
-  } else {
-    await lib.puts('\nMy high school experiences are hidden by default. To see these, execute with arguemnt --verbose.\n');
   }
 
   await lib.puts('\x1b[0m');

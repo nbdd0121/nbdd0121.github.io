@@ -57,27 +57,32 @@ VFS.FileNode = class FileNode {
   }
 
   read(offset, buffer) {
+    if (!(this.mode & 0o400)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.read(offset, buffer);
     if (this.doRead) return this.doRead(offset, buffer);
     throw new Error('read is not implemented');
   }
 
   write(offset, buffer) {
+    if (!(this.mode & 0o200)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.write(offset, buffer);
     if (this.doWrite) return this.doWrite(offset, buffer);
     throw new Error('write is not implemented');
   }
 
   readdir() {
+    if (!(this.mode & 0o100)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.readdir();
     if (this.doReaddir) return this.doReaddir();
     throw new Error('readdir is not implemented');
   }
 
   async finddir(name) {
+    if (!(this.mode & 0o400)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.finddir(name);
     if (this.doFinddir) return this.doFinddir(name);
-    let list = await this.readdir();
+    if (!this.doReaddir) new Error('finddir is not implemented');
+    let list = await this.doReaddir();
     for (let item of list) {
       if (item.name == name) return item;
     }
@@ -85,12 +90,14 @@ VFS.FileNode = class FileNode {
   }
 
   create(name, type = 'file', mode = 0o666) {
+    if (!(this.mode & 0o200)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.create(name, type, mode);
     if (this.doCreate) return this.doCreate(name, type, mode);
     throw new Error('create is not implemented');
   }
 
   mkdir(name, mode = 0o777) {
+    if (!(this.mode & 0o200)) throw new Error('Permission denied');
     if (this.pointer) return this.pointer.mkdir(name, mode);
     if (this.doMkdir) return this.doMkdir(name, mode);
     throw new Error('mkdir is not implemented');
@@ -269,8 +276,9 @@ class FileDesc {
   }
 
   async exec(env, args) {
+    if ((this.node.mode & 0o100) === 0) throw new Error('Permission denied');
     if (this.node.type !== 'file') throw new Error('cannot execute ' + this.node.type);
-    if ((this.node.mode & 0o100) === 0) throw new Error('permission denied');
+    this.ptr = 0;
     let code = await this.readAll('string');
     let globalEval = eval;
     let func = globalEval('(' + code + ')\n//# sourceURL=' + this.node.name + '.js');
@@ -293,20 +301,10 @@ class FileDesc {
     return [len, convFromBuf(buffer.subarray(0, len), format)];
   }
 
-  async readAll(buffer) {
-    buffer = asBuf(buffer);
-    let type = 'Uint8Array';
-    if (!(buffer instanceof Uint8Array)) {
-      type = buffer;
-      buffer = new Uint8Array(new ArrayBuffer(this.node.length));
-    }
-    let len = await this.node.read(this.ptr, buffer);
-    if (len != buffer.length) throw new Error('cannot read all');
-    switch (type) {
-      case 'Uint8Array': return buffer;
-      case 'string': return new TextDecoder('utf-8').decode(buffer);
-      default: throw new Error('unknown type');
-    }
+  async readAll(format) {
+    let [len, buf] = await this.read(this.node.length, format);
+    if (len != this.node.length) throw new Error('cannot read all');
+    return buf;
   }
 
   async writeAll(buffer) {
@@ -327,8 +325,6 @@ class FileDesc {
     return this.node.type === 'dir';
   }
 }
-
-
 
 VFS.open = async function open(fullpath, newFileType) {
   let file = await VFS.lookup(fullpath, newFileType);
