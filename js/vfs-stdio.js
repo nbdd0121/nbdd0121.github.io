@@ -4,7 +4,6 @@
   let inputbox;
   let classList = [];
   let escapeContent = true;
-  let resolveStdin;
 
   // Process escape sequence and update globla states
   function parseEscape(seq) {

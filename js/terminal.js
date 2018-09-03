@@ -38,6 +38,7 @@ enqueueTask(async () => {
     VFS.load('/bin/echo', 'js/bin/echo.js')
   ]);
 
+  (await VFS.lookup('/bin/markdown', 'file')).mount(null, 'netfs', 'js/bin/markdown.js');
   (await VFS.mkdir('/home/blog')).mount(null, 'netfs', 'blog/manifest');
 
   async function init() {

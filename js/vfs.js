@@ -438,4 +438,35 @@ VFS.load = load;
       start();
     }
   }
+
+  let loaded = Object.create(null);
+  window.includeStylesheet = function(url) {
+    if (url in loaded) return;
+    loaded[url] = true;
+    return new Promise((resolve, reject) => {
+      let link = this.document.createElement('link');
+      link.onload = resolve;
+      link.onerror = reject;
+      link.type = 'text/css';
+      link.href = url;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    });
+  };
+  window.includeScript = function(url, integrity) {
+    if (url in loaded) return;
+    loaded[url] = true;
+    return new Promise((resolve, reject) => {
+      let script = document.createElement("script");
+      script.onload = resolve;
+      script.onerror = reject;
+      script.src = url;
+      if (integrity) {
+        script.crossOrigin = 'anonymous';
+        script.integrity = integrity;
+      }
+      script.type = 'application/javascript';
+      document.head.appendChild(script);
+    });
+  };
 }
