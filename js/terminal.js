@@ -20,7 +20,7 @@ enqueueTask(async () => {
   await VFS.mkdir("/bin");
 
   await define('/bin/clear', function () {
-    document.body.innerHTML = '<p></p>';
+    document.body.innerHTML = '<div></div>';
   });
 
   await define('/bin/pwd', function (env, _arg, lib) {
