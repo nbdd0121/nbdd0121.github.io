@@ -38,6 +38,8 @@ enqueueTask(async () => {
     VFS.load('/bin/echo', 'js/bin/echo.js')
   ]);
 
+  (await VFS.mkdir('/home/blog')).mount(null, 'netfs', 'blog/manifest');
+
   async function init() {
     var env = {
       PATH: "/bin/",

@@ -106,6 +106,7 @@ CLib.prototype.historyNextLine = async function (specKey) {
       default:
         return;
     }
+    e.preventDefault();
     if (key == "up") {
       if (id == 0) {
         return;
@@ -114,7 +115,7 @@ CLib.prototype.historyNextLine = async function (specKey) {
         inputBackup = inputbox.value;
       }
       id--;
-      inputbox.value = history[id];
+      inputbox.value = history[id].slice(0, -1);
     } else if (key == "down") {
       if (id == history.length) {
         return;
@@ -123,16 +124,15 @@ CLib.prototype.historyNextLine = async function (specKey) {
       if (id == history.length) {
         inputbox.value = inputBackup;
       } else {
-        inputbox.value = history[id];
+        inputbox.value = history[id].slice(0, -1);
       }
     } else {
       specKey && specKey(key, inputbox);
     }
-    e.preventDefault();
   });
 
   let [, val] = await promise;
-  if (history[history.length - 1] != val) {
+  if (history[history.length - 1] !== val && val !== '\n') {
     history.push(val);
     id = history.length;
     if (history.length > 20) {

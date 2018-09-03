@@ -1,7 +1,7 @@
 async function main(env, args, lib) {
   let file = args[1] || "";
   await lib.chdir(file);
-  let dir = await (await lib.fopen(args[1] || '.')).list();
+  let dir = await (await lib.fopen('.')).list();
   for (let item of dir) {
     var stat = await lib.stat(item);
     switch (stat.type) {
