@@ -15,10 +15,14 @@ input::-ms-clear{
 	display: none;
 }
 
-div{
+body>div {
 	margin:0px;
 	line-height:1.4em;
 	white-space: pre-wrap;
+}
+
+body>div::after{
+	content:' '
 }
 
 #inputbox{

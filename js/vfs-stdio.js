@@ -59,8 +59,6 @@
       if (first) {
         first = false;
       } else {
-        if (paragraph.textContent == "")
-          paragraph.innerHTML = "&nbsp;";
         paragraph = document.createElement('div');
         document.body.appendChild(paragraph);
       }
