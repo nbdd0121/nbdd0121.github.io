@@ -38,6 +38,7 @@
         parseEscape(text.substr(0, escapeEnd));
         text = text.substr(escapeEnd + 1);
       }
+      if (!text) continue;
       let element = document.createElement('span');
       element.classList = classList;
       if (escapeContent) {
