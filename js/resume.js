@@ -52,10 +52,16 @@ Other skills:
   Compiler Construction (Familiar)
   Operating System Development (Hobby)
 
-<b>== Awards ==</b>
-  ECM Prize for the Best Part II Student
-  BCS Award for an Outstanding Second Year Student
-  G-Research Prize for the Best Part IA Student
+<b>== Prizes and Scholarships ==</b>
+  Winifred Georgina Holgate Pollard Memorial Prize (2018)
+  The Hugo de Balsham Prize for Exceptional Academic Performance (2018)
+  Friends of Peterhouse Prize in Computer Sciences (2018)
+  Charles Babbage Scholarship of Peterhouse (2018)
+  ECM Prize for the Best Part II Student (2018)
+  Charles Babbage Scholarship of Peterhouse (2017)
+  BCS Award for an Outstanding Second Year Student (2017)
+  College Scholarship of Peterhouse (2016)
+  G-Research Prize for the Best Part IA Student (2016)
 
 <b>== Working Experience ==</b>
 Research Intern, Microsoft Research Cambridge (2017 Summer)
