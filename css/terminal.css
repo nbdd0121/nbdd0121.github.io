@@ -6,7 +6,7 @@ body{
 	color:#EEEEEC;
 	background-color: #3D3D3D;
 	font-size: 17px;
-	font-family: Consolas, Courier, monospace;
+	font-family: 'Ubuntu Mono', monospace;
 	margin:20px;
 }
 
@@ -17,7 +17,7 @@ input::-ms-clear{
 
 body>div {
 	margin:0px;
-	line-height:1.4em;
+	line-height:1.2;
 	white-space: pre-wrap;
 }
 
