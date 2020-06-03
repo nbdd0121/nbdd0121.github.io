@@ -1,58 +1,44 @@
 async function main(_env, args, lib) {
   let projects = [
     'Stable Projects',
-    ["", 'riscv-dbt', 'My BA degree project, a dynamic binary translator from RISC-V to AMD64'],
+    ["", 'r2vm', 'Rust RISC-V Virtual Machine, a cycle-level dynamic binary translator from RISC-V to AMD64'],
+    ['', 'DeltaDB', 'Database optimised for storing diffs, e.g. MediaWiki revisions'],
     ["", 'AppMover', 'A simple tool for moving installed programs on Windows'],
-    ["", 'Encoding', 'A whatwg encoding specification conforming encoding library in Javascript'],
-    ["", 'norlit-libc', 'A C11 specification conformant library implementation from scratch'],
-    ["", 'XRMI', 'Java networking library for smarter remote method invocation'],
-    ["http://nbdd0121.github.io/JSMinifier", 'JSMinifier', 'ES5 Minifier and obfuscator'],
-    ["http://nbdd0121.github.io/MUNRecorder", 'MUNRecorder', 'Model United Nations conference organizer'],
-    ["http://nbdd0121.github.io/SATVocab", 'SATVocab', 'A tool helps Chinese students recite SAT vocabularies'],
-    'Some Old & Discontinued Works', ["", 'NorlitOS', '32-bit operating system project'],
-    ["", 'SakiOS', 'Bootloader Environment'],
-    ["", 'NodokaJS', 'Javascript runtime project'],
-    'Some Interesting Stuff', ['', 'ELFSharedLibrary', 'A ELF shared library loader that works on Windows (32-bit only)'],
-    ['', 'GenerationalGC', 'Generational garbage collector for C++'],
-    ['', 'PreprocessingArt', 'Preprocessor tricks'],
-    ['', 'CppCoroutine', 'Single-thread corountine support for C++'],
-    'AIs Made in Summer School', ['', 'Tsuro', 'Tsuro game and a naive AI implementation'],
-    ["https://github.com/Vadman97/ChessGame", 'ChessGame', 'Chess game with AI developed by Vadim Korolik ad me'],
-    ["", 'Creepy2048', '2048 with AI and with different difficulties'],
-    'Scratch Works', ["", 'make.js', 'Makefile substitute written using Node.js'],
-    ['', 'JS-Text-Preprocessor', 'JavaScript-powered servlet page'],
-    ['', 'Norlit-IDE', 'A node-webkit & ace powered editor'],
     'MediaWiki Extensions', ['https://github.com/nbdd0121/MW-FlowThread', 'FlowThread', 'Comment posting extension for MediaWiki'],
     ['https://github.com/nbdd0121/MW-Avatar', 'Avatar', 'Avatar system that allows client-side avatar resampling & clipping'],
     //['https://github.com/nbdd0121/MW-PageRating', 'PageRating', 'Simple rating widget that allows you to rate a page using 1-5 stars'],
+    'Some Old & Discontinued Works',
+    ["", 'XRMI', 'Java networking library for smarter remote method invocation'],
+    ["", 'NorlitOS', '32-bit operating system project'],
+    ["", 'norlit-libc', 'A C11 specification conformant library implementation from scratch'],
+    ["", 'NodokaJS', 'Javascript runtime project'],
+    ["http://nbdd0121.github.io/JSMinifier", 'JSMinifier', 'ES5 Minifier and obfuscator'],
+    ["http://nbdd0121.github.io/MUNRecorder", 'MUNRecorder', 'Model United Nations conference organizer'],
+    ["http://nbdd0121.github.io/SATVocab", 'SATVocab', 'A tool helps Chinese students recite SAT vocabularies'],
+    'Some Interesting Stuff',
+    ['', 'stackful', 'Stackful coroutine for Rust'],
+    ['', 'GenerationalGC', 'Generational garbage collector for C++'],
+    ['', 'sv-elaborator', 'SystemVerilog parser written in Rust (incomplete)'],
   ];
 
   await lib.puts(`\x1b[2m
 <b>== Personal Information ==</b>
 Name: Xuan Guo, aka Gary
 Date of Birth: Jan 21st, 1998
-Email: gary${'@'}garyguo.net
+Email: gary.guo${'@'}cl.cam.ac.uk, gary${'@'}garyguo.net
 GitHub: <a href="https://github.com/nbdd0121/" target="_blank">@nbdd0121</a>
 Website: <a href="https://garyguo.net/" target="_blank">garyguo.net</a>
 
 <b>== Education ==</b>
+PhD in Computer Science: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a> (2018-Current)
+
 Bachelor of Art in Computer Science: <a href="http://www.cam.ac.uk" target="_blank">University of Cambridge</a> (2015-2018)
   Part II Tripos: 1st Class Honour with Distinction
   Part IB Tripos: 1st Class Honour
   Part IA Tripos: 1st Class Honour
 
-<b>== Skills ==</b>
-Languages:
-  Proficient: C/C++, Java, EMCAScript, PHP, SystemVerilog, Basic
-  Familiar  : ML/Ocaml, Rust, Prolog, C#
-  Basic     : Python, Scala, Bash, MATLAB
-Other skills:
-  Web Development (Proficient)
-  Hardware Development (Familiar)
-  Compiler Construction (Familiar)
-  Operating System Development (Hobby)
-
 <b>== Prizes and Scholarships ==</b>
+  Peterhouse Research Studentship (2018-Current)
   Winifred Georgina Holgate Pollard Memorial Prize (2018)
   The Hugo de Balsham Prize for Exceptional Academic Performance (2018)
   Friends of Peterhouse Prize in Computer Sciences (2018)
@@ -95,10 +81,10 @@ Software Developer Intern, Best Internet Technology CO., LTD (2013 Summer)
   Webmaster, Peterhouse JCR (2016)
   IT Officer, Cambridge University Chinese Culture Society (2016)
 
-<b>== Hobbies and Interests ==<b>
-  * Reading specifications (ex. C11 specification)
-  * Reinventing wheels (see my projects)
-  * Compiler theories and operating system theories
+<b>== Hobby and Interests ==<b>
+  * Computer architecture, cache, accelerators
+  * Programming languages and compilers
+  * Operating systems
   * Surfing on MediaWiki sites
   * Watching animes and reading mangas
 

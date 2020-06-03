@@ -69,7 +69,7 @@ enqueueTask(async () => {
     };
 
     let lib = new CLib(env);
-    await lib.puts("Gary Guo <gary@garyguo.net>\nCopyright (c) 2014 - 2018, Gary Guo. All rights reserved.\n");
+    await lib.puts("Copyright (c) 2014 - 2020, Gary Guo. All rights reserved.\n");
 
     let firstCommand = cmdFromHash(location.hash);
     if (firstCommand) {
